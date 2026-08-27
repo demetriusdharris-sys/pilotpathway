@@ -5,6 +5,7 @@ import { getSupabaseEnv } from "@/lib/supabase/env";
 import { getLesson } from "@/lib/curriculum";
 import { getProgress } from "@/lib/progress";
 import { LessonStatusControls } from "@/components/lesson-status-controls";
+import { TutorChat } from "@/components/tutor-chat";
 
 type LessonPageProps = {
   params: Promise<{ stage: string; lesson: string }>;
@@ -98,6 +99,18 @@ export default async function LessonPage({ params }: LessonPageProps) {
       </section>
 
       <LessonStatusControls lessonSlug={lesson.slug} status={status} />
+
+      <TutorChat
+        stageSlug={stage.slug}
+        lessonSlug={lesson.slug}
+        starters={[
+          `Quiz me on ${lesson.title.toLowerCase()}`,
+          "Explain this like I've never flown before",
+          lesson.objectives[0]
+            ? `Help me with: ${lesson.objectives[0].toLowerCase()}`
+            : "Where should I start?",
+        ]}
+      />
     </main>
   );
 }
