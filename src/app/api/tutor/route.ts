@@ -75,17 +75,29 @@ export async function POST(request: NextRequest) {
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       try {
-        // Two system blocks: the frozen instructor prompt first so it stays a
-        // stable cache prefix, then the per-lesson context.
+        // Two system blocks. The frozen instructor prompt goes first and is
+        // cached: it is ~2,700 tokens and identical on every single turn, so
+        // paying full price for it each time is the dominant cost. The
+        // per-lesson context varies and sits after the breakpoint.
         const system = found
           ? [
-              { type: "text" as const, text: SYSTEM_PROMPT },
+              {
+                type: "text" as const,
+                text: SYSTEM_PROMPT,
+                cache_control: { type: "ephemeral" as const },
+              },
               {
                 type: "text" as const,
                 text: buildLessonContext(found.stage, found.lesson),
               },
             ]
-          : [{ type: "text" as const, text: SYSTEM_PROMPT }];
+          : [
+              {
+                type: "text" as const,
+                text: SYSTEM_PROMPT,
+                cache_control: { type: "ephemeral" as const },
+              },
+            ];
 
         const upstream = anthropic.messages.stream({
           model: TUTOR_MODEL,
