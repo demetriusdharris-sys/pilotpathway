@@ -4,9 +4,10 @@ import { createClient } from "@/lib/supabase/server";
 import { getSupabaseEnv } from "@/lib/supabase/env";
 import { getLesson } from "@/lib/curriculum";
 import {
-  buildSystemPrompt,
+  buildLessonContext,
   isTutorMessage,
   MAX_HISTORY_MESSAGES,
+  SYSTEM_PROMPT,
   TUTOR_MAX_TOKENS,
   TUTOR_MODEL,
   type TutorMessage,
@@ -74,10 +75,22 @@ export async function POST(request: NextRequest) {
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       try {
+        // Two system blocks: the frozen instructor prompt first so it stays a
+        // stable cache prefix, then the per-lesson context.
+        const system = found
+          ? [
+              { type: "text" as const, text: SYSTEM_PROMPT },
+              {
+                type: "text" as const,
+                text: buildLessonContext(found.stage, found.lesson),
+              },
+            ]
+          : [{ type: "text" as const, text: SYSTEM_PROMPT }];
+
         const upstream = anthropic.messages.stream({
           model: TUTOR_MODEL,
           max_tokens: TUTOR_MAX_TOKENS,
-          system: buildSystemPrompt(found?.stage, found?.lesson),
+          system,
           messages: messages.slice(-MAX_HISTORY_MESSAGES),
         });
 

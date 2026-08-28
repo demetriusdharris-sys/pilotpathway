@@ -90,11 +90,12 @@ export default async function LessonPage({ params }: LessonPageProps) {
         </p>
         <p className="text-muted-foreground mt-2 text-sm">
           <span className="text-foreground font-medium">ACS area:</span>{" "}
-          {lesson.acsAreas.join(", ")}
+          {lesson.acsAreas.join(", ")} — {lesson.topic}
         </p>
         <p className="text-muted-foreground mt-4 text-xs text-pretty">
-          Always confirm specifics against the current FAA handbook and with
-          your CFI. Regulations and handbook content change.
+          AI ground instructor. Not an endorsement. Always confirm regulations
+          against the current FAA publications and with your CFI. Regulations
+          and handbook content change.
         </p>
       </section>
 
@@ -104,11 +105,9 @@ export default async function LessonPage({ params }: LessonPageProps) {
         stageSlug={stage.slug}
         lessonSlug={lesson.slug}
         starters={[
-          `Quiz me on ${lesson.title.toLowerCase()}`,
+          "Start this lesson. Teach the objective. Ask me one question.",
           "Explain this like I've never flown before",
-          lesson.objectives[0]
-            ? `Help me with: ${lesson.objectives[0].toLowerCase()}`
-            : "Where should I start?",
+          `Quiz me on ${lesson.title.toLowerCase()}`,
         ]}
       />
     </main>

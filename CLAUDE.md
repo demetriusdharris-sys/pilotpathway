@@ -40,6 +40,16 @@ The existing Replit app (mentorship-hub.replit.app) is a PITCH DEMO only. Do not
 - Free core ground school. Progress must be visible.
 - Stage 1 first: Foundations & Pre-Solo.
 
+## AI Instructor
+- Captain Path lives in src/lib/tutor.ts and src/lib/instructor/*
+- Never weaken ACS to be "inclusive." Inclusion is examples, tone, access, history cards.
+- History only from history-cards.ts unless a new reviewed card is added.
+- Latimer.ai is a future RAG partner, not the CFI.
+- Model is claude-sonnet-5. It rejects `temperature`, `top_p`, and `top_k` with a 400 — do not add them.
+- ACS Areas of Operation are referenced BY NAME, never by task code. Task codes are
+  revision-specific and easy to get subtly wrong; a student showing a DPE a bad code
+  pays for our mistake. Same rule for handbook chapter numbers.
+
 ## Commands
 - pnpm dev
 - pnpm build
