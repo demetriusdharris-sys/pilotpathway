@@ -17,6 +17,37 @@ function readCredentials(formData: FormData) {
   return { email, password };
 }
 
+/**
+ * Supabase auth errors are written for developers. A student reading
+ * "over_email_send_rate_limit" learns nothing and leaves. Map the ones we
+ * actually hit to something they can act on, and fall back to the raw
+ * message so an unknown failure is never silent.
+ */
+function studentFacingError(message: string): string {
+  const normalized = message.toLowerCase();
+
+  if (normalized.includes("rate limit")) {
+    return "We couldn't send your confirmation email just now — too many have gone out in the last hour. Wait a few minutes and try again.";
+  }
+  if (normalized.includes("already registered")) {
+    return "That email already has an account. Try logging in instead.";
+  }
+  if (normalized.includes("invalid") && normalized.includes("email")) {
+    return "That email address doesn't look right. Check it and try again.";
+  }
+  if (normalized.includes("invalid login credentials")) {
+    return "That email and password don't match. Check both and try again.";
+  }
+  if (normalized.includes("email not confirmed")) {
+    return "Confirm your email first — check your inbox for the link we sent.";
+  }
+  if (normalized.includes("password")) {
+    return "That password won't work. Use at least 8 characters.";
+  }
+
+  return message;
+}
+
 function safeNext(value: FormDataEntryValue | null) {
   const next = String(value ?? "");
   // Only allow same-origin relative paths, never a protocol-relative URL.
@@ -50,7 +81,7 @@ export async function signUp(
   });
 
   if (error) {
-    return { error: error.message };
+    return { error: studentFacingError(error.message) };
   }
 
   // With email confirmation on, Supabase returns a user but no session.
@@ -82,7 +113,7 @@ export async function logIn(
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    return { error: error.message };
+    return { error: studentFacingError(error.message) };
   }
 
   revalidatePath("/", "layout");

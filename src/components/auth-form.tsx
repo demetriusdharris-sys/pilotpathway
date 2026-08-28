@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,11 +23,31 @@ function SubmitButton({
   pendingLabel: string;
 }) {
   const { pending } = useFormStatus();
+  const [slow, setSlow] = useState(false);
+
+  // A serverless cold start can take tens of seconds. Without this, a slow
+  // response is indistinguishable from a crash and the student gives up.
+  useEffect(() => {
+    if (!pending) {
+      setSlow(false);
+      return;
+    }
+    const timer = setTimeout(() => setSlow(true), 6000);
+    return () => clearTimeout(timer);
+  }, [pending]);
 
   return (
-    <Button type="submit" className="w-full" disabled={pending}>
-      {pending ? pendingLabel : label}
-    </Button>
+    <div className="flex flex-col gap-2">
+      <Button type="submit" className="w-full" disabled={pending}>
+        {pending ? pendingLabel : label}
+      </Button>
+      {slow ? (
+        <p role="status" className="text-muted-foreground text-xs text-pretty">
+          Still working — the server is waking up. This can take up to a
+          minute the first time. Don&apos;t refresh.
+        </p>
+      ) : null}
+    </div>
   );
 }
 
