@@ -90,6 +90,22 @@ export async function signUp(
     redirect("/dashboard");
   }
 
+  // When the address already has an account, Supabase sends no email and
+  // returns a decoy user with an empty identities array — deliberate, so the
+  // site cannot be probed to discover which emails are registered. It even
+  // fills in confirmation_sent_at, so that field cannot be trusted.
+  //
+  // We must not say "that email is taken" (it would leak exactly what the
+  // decoy protects), but we also cannot promise an email that will never
+  // arrive. One message covers both cases without stranding anyone.
+  const alreadyRegistered = data.user?.identities?.length === 0;
+
+  if (alreadyRegistered) {
+    return {
+      message: `If ${email} is new here, a confirmation link is on its way. If you already have an account with it, log in below instead.`,
+    };
+  }
+
   return {
     message: `Check ${email} for a confirmation link. Open it and you are in.`,
   };
