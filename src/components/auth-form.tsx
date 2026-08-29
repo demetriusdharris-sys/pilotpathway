@@ -13,8 +13,6 @@ type AuthFormProps = {
   pendingLabel: string;
   passwordHint?: string;
   next?: string;
-  /** Signup only. Optional — the tutor handles an unknown name gracefully. */
-  askFirstName?: boolean;
 };
 
 function SubmitButton({
@@ -59,32 +57,12 @@ export function AuthForm({
   pendingLabel,
   passwordHint,
   next,
-  askFirstName,
 }: AuthFormProps) {
   const [state, formAction] = useActionState<AuthState, FormData>(action, {});
 
   return (
     <form action={formAction} className="flex flex-col gap-5">
       {next ? <input type="hidden" name="next" value={next} /> : null}
-
-      {askFirstName ? (
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="firstName">
-            First name{" "}
-            <span className="text-muted-foreground font-normal">
-              (optional)
-            </span>
-          </Label>
-          <Input
-            id="firstName"
-            name="firstName"
-            type="text"
-            autoComplete="given-name"
-            maxLength={60}
-            placeholder="What should your instructor call you?"
-          />
-        </div>
-      ) : null}
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="email">Email</Label>

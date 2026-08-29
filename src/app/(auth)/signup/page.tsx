@@ -21,7 +21,6 @@ export default function SignUpPage() {
         submitLabel="Create account"
         pendingLabel="Creating account…"
         passwordHint="At least 8 characters."
-        askFirstName
       />
 
       <p className="text-muted-foreground text-sm">

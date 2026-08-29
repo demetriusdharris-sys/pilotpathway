@@ -12,18 +12,13 @@ import {
 } from "@/lib/tutor-usage";
 import {
   buildLessonContext,
+  isTutorMessage,
   MAX_HISTORY_MESSAGES,
   SYSTEM_PROMPT,
   TUTOR_MAX_TOKENS,
   TUTOR_MODEL,
+  type TutorMessage,
 } from "@/lib/tutor";
-import {
-  countConversation,
-  loadConversation,
-  saveMessage,
-} from "@/lib/instructor-messages";
-import { buildMasteryNotes } from "@/lib/mastery";
-import { getProgress } from "@/lib/progress";
 
 const MAX_MESSAGE_CHARS = 4000;
 
@@ -119,41 +114,30 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // The browser sends only the new question. Conversation history is loaded
-  // server-side from the database, so a modified client cannot inject a fake
-  // history to steer the tutor or inflate the context we pay for.
-  const { message, stageSlug, lessonSlug } = (body ?? {}) as {
-    message?: unknown;
+  const { messages, stageSlug, lessonSlug } = (body ?? {}) as {
+    messages?: unknown;
     stageSlug?: unknown;
     lessonSlug?: unknown;
   };
 
-  if (typeof message !== "string" || message.trim().length === 0) {
+  if (!Array.isArray(messages) || !messages.every(isTutorMessage)) {
+    return NextResponse.json(
+      { error: "Invalid request.", code: "bad_request" },
+      { status: 400 },
+    );
+  }
+  if (messages.length === 0) {
     return NextResponse.json(
       { error: "Ask a question first.", code: "bad_request" },
       { status: 400 },
     );
   }
-  if (message.length > MAX_MESSAGE_CHARS) {
+  if (messages.some((m: TutorMessage) => m.content.length > MAX_MESSAGE_CHARS)) {
     return NextResponse.json(
       { error: "That message is too long. Try breaking it up.", code: "too_long" },
       { status: 400 },
     );
   }
-
-  const found =
-    typeof stageSlug === "string" && typeof lessonSlug === "string"
-      ? getLesson(stageSlug, lessonSlug)
-      : undefined;
-
-  if (!found) {
-    return NextResponse.json(
-      { error: "That lesson does not exist.", code: "unknown_lesson" },
-      { status: 404 },
-    );
-  }
-
-  const question = message.trim();
 
   // --- Rate limiting and spend protection -----------------------------------
   //
@@ -197,31 +181,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // --- Student context ------------------------------------------------------
-  //
-  // Everything the tutor needs to know about who it is talking to and where
-  // they are. All four reads are independent, so they run concurrently.
-
-  const [history, priorCount, progress, profileResult] = await Promise.all([
-    loadConversation(supabase, user.id, found.lesson.slug, MAX_HISTORY_MESSAGES),
-    countConversation(supabase, user.id, found.lesson.slug),
-    getProgress(user.id),
-    supabase.from("profiles").select("first_name").eq("id", user.id).maybeSingle(),
-  ]);
-
-  const firstName = profileResult.data?.first_name ?? null;
-
-  const masteryNotes = buildMasteryNotes({
-    stage: found.stage,
-    lesson: found.lesson,
-    progress,
-    priorMessagesInLesson: priorCount,
-  });
-
-  // Persist the question now. If the reply fails the student can see what they
-  // asked; an orphan question is recoverable, a lost one is not.
-  await saveMessage(supabase, user.id, found.lesson.slug, "user", question);
-
   // --- Upstream call --------------------------------------------------------
 
   const anthropic = new Anthropic();
@@ -230,37 +189,36 @@ export async function POST(request: NextRequest) {
   // cached: it is ~2,700 tokens and identical on every single turn, so
   // paying full price for it each time is the dominant cost. The
   // per-lesson context varies and sits after the breakpoint.
-  const lessonContext = buildLessonContext(
-    found.stage,
-    found.lesson,
-    firstName,
-    masteryNotes,
-  );
+  const found =
+    typeof stageSlug === "string" && typeof lessonSlug === "string"
+      ? getLesson(stageSlug, lessonSlug)
+      : undefined;
 
-  const system = [
-    {
-      type: "text" as const,
-      text: SYSTEM_PROMPT,
-      cache_control: { type: "ephemeral" as const },
-    },
-    {
-      type: "text" as const,
-      text: lessonContext,
-    },
-  ];
-
-  // History from the database, then the new question. The cap is applied to
-  // the loaded history so the request cannot grow without bound.
-  const conversation = [
-    ...history.map((m) => ({ role: m.role, content: m.content })),
-    { role: "user" as const, content: question },
-  ].slice(-MAX_HISTORY_MESSAGES);
+  const system = found
+    ? [
+        {
+          type: "text" as const,
+          text: SYSTEM_PROMPT,
+          cache_control: { type: "ephemeral" as const },
+        },
+        {
+          type: "text" as const,
+          text: buildLessonContext(found.stage, found.lesson),
+        },
+      ]
+    : [
+        {
+          type: "text" as const,
+          text: SYSTEM_PROMPT,
+          cache_control: { type: "ephemeral" as const },
+        },
+      ];
 
   const upstream = anthropic.messages.stream({
     model: TUTOR_MODEL,
     max_tokens: TUTOR_MAX_TOKENS,
     system,
-    messages: conversation,
+    messages: messages.slice(-MAX_HISTORY_MESSAGES),
   });
 
   const iterator = upstream[Symbol.asyncIterator]();
@@ -293,14 +251,11 @@ export async function POST(request: NextRequest) {
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
-      let reply = "";
-
       const emit = (event: Anthropic.MessageStreamEvent) => {
         if (
           event.type === "content_block_delta" &&
           event.delta.type === "text_delta"
         ) {
-          reply += event.delta.text;
           controller.enqueue(encoder.encode(event.delta.text));
         }
       };
@@ -319,23 +274,12 @@ export async function POST(request: NextRequest) {
         const final = await upstream.finalMessage();
 
         if (final.stop_reason === "refusal") {
-          const note =
-            "\n\nI can't help with that one. Ask your CFI, and let's get back to the lesson.";
-          reply += note;
-          controller.enqueue(encoder.encode(note));
+          controller.enqueue(
+            encoder.encode(
+              "\n\nI can't help with that one. Ask your CFI, and let's get back to the lesson.",
+            ),
+          );
         }
-
-        // Only persist a reply that actually finished. A partial or failed
-        // answer saved here would be replayed as history on every later turn,
-        // and the tutor would treat its own truncated sentence as something
-        // it had taught.
-        await saveMessage(
-          supabase,
-          user.id,
-          found.lesson.slug,
-          "assistant",
-          reply,
-        );
 
         await recordTutorCost(admin, user.id, estimateCostCents(final.usage));
       } catch (error) {
