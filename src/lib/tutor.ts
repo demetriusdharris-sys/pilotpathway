@@ -134,10 +134,18 @@ IDENTITY LINE (use only if asked who you are)
 export function buildLessonContext(
   stage: Stage,
   lesson: Lesson,
-  studentFirstName?: string,
+  studentFirstName?: string | null,
   masteryNotes?: string,
 ): string {
   const historyCard = selectHistoryCard(lesson.historyCardId);
+
+  // A student who did not give a name should not be addressed as "student".
+  // Telling the model the name is unknown, and to simply not use one, reads as
+  // normal conversation; a placeholder reads as a form letter.
+  const name = studentFirstName?.trim();
+  const nameLine = name
+    ? `Student first name: ${name}. Use it naturally and sparingly, the way an instructor would.`
+    : "The student has not shared their name. Do not use a placeholder and do not invent one — address them directly without a name.";
 
   const card = historyCard
     ? `History card (use at most once, only if it fits this turn):
@@ -157,8 +165,8 @@ ${lesson.objectives.map((objective) => `- ${objective}`).join("\n")}
 ACS area of operation: ${lesson.acsAreas.join(", ")}
 Topic: ${lesson.topic}
 Reference sources: ${lesson.sources.join(", ")}
-Student first name: ${studentFirstName || "student"}
-Mastery so far: ${masteryNotes || "new lesson"}
+${nameLine}
+Where this student is: ${masteryNotes || "No progress recorded yet — treat this as a fresh start."}
 ${card}`;
 }
 
@@ -166,15 +174,3 @@ export type TutorMessage = {
   role: "user" | "assistant";
   content: string;
 };
-
-export function isTutorMessage(value: unknown): value is TutorMessage {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-  const candidate = value as Record<string, unknown>;
-  return (
-    (candidate.role === "user" || candidate.role === "assistant") &&
-    typeof candidate.content === "string" &&
-    candidate.content.trim().length > 0
-  );
-}

@@ -8,14 +8,17 @@ type TutorChatProps = {
   stageSlug: string;
   lessonSlug: string;
   starters: string[];
+  /** Prior conversation for this lesson, loaded server-side on page render. */
+  initialMessages: TutorMessage[];
 };
 
 export function TutorChat({
   stageSlug,
   lessonSlug,
   starters,
+  initialMessages,
 }: TutorChatProps) {
-  const [messages, setMessages] = useState<TutorMessage[]>([]);
+  const [messages, setMessages] = useState<TutorMessage[]>(initialMessages);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,10 +39,12 @@ export function TutorChat({
     setStreaming(true);
 
     try {
+      // Only the new question goes over the wire. History is loaded from the
+      // database server-side, so the client cannot forge it.
       const response = await fetch("/api/tutor", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: next, stageSlug, lessonSlug }),
+        body: JSON.stringify({ message: question, stageSlug, lessonSlug }),
       });
 
       if (!response.ok || !response.body) {
