@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getSupabaseEnv } from "@/lib/supabase/env";
 import { getLesson } from "@/lib/curriculum";
 import { getProgress } from "@/lib/progress";
+import { loadConversation } from "@/lib/instructor-messages";
+import { MAX_HISTORY_MESSAGES } from "@/lib/tutor";
 import { LessonStatusControls } from "@/components/lesson-status-controls";
 import { TutorChat } from "@/components/tutor-chat";
 
@@ -46,6 +48,14 @@ export default async function LessonPage({ params }: LessonPageProps) {
 
   const progress = await getProgress(user.id);
   const status = progress.get(lesson.slug) ?? "not_started";
+
+  // Prior conversation, so a refresh no longer destroys the thread.
+  const history = await loadConversation(
+    supabase,
+    user.id,
+    lesson.slug,
+    MAX_HISTORY_MESSAGES,
+  );
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-12">
@@ -104,6 +114,10 @@ export default async function LessonPage({ params }: LessonPageProps) {
       <TutorChat
         stageSlug={stage.slug}
         lessonSlug={lesson.slug}
+        initialMessages={history.map((m) => ({
+          role: m.role,
+          content: m.content,
+        }))}
         starters={[
           "Start this lesson. Teach the objective. Ask me one question.",
           "Explain this like I've never flown before",

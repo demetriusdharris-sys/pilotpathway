@@ -74,10 +74,19 @@ export async function signUp(
   const supabase = await createClient();
   const origin = (await headers()).get("origin");
 
+  // Optional. A student who skips it is not blocked; the tutor is told the
+  // name is unknown and simply does not use one.
+  const firstName = String(formData.get("firstName") ?? "")
+    .trim()
+    .slice(0, 60);
+
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { emailRedirectTo: `${origin}/auth/callback` },
+    options: {
+      emailRedirectTo: `${origin}/auth/callback`,
+      data: firstName ? { first_name: firstName } : undefined,
+    },
   });
 
   if (error) {
