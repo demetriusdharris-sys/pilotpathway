@@ -19,6 +19,7 @@ export function TutorChat({
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [limitReached, setLimitReached] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
   async function send(text: string) {
@@ -43,7 +44,22 @@ export function TutorChat({
 
       if (!response.ok || !response.body) {
         const detail = await response.json().catch(() => null);
+
+        // 429 is not a failure — the student hit today's practice cap. Say so
+        // plainly and stop offering an input they cannot use.
+        if (response.status === 429) {
+          setLimitReached(true);
+          setError(
+            detail?.error ??
+              "You've reached today's practice limit with your instructor. It resets tomorrow.",
+          );
+          setMessages(messages);
+          setStreaming(false);
+          return;
+        }
+
         setError(detail?.error ?? "Could not reach your instructor.");
+        setMessages(messages);
         setStreaming(false);
         return;
       }
@@ -123,10 +139,20 @@ export function TutorChat({
 
       {error ? (
         <p
-          role="alert"
-          className="border-destructive/30 bg-destructive/10 text-destructive mt-4 rounded-md border px-3 py-2 text-sm"
+          role={limitReached ? "status" : "alert"}
+          className={
+            limitReached
+              ? "border-border bg-muted text-foreground mt-4 rounded-md border px-3 py-2 text-sm text-pretty"
+              : "border-destructive/30 bg-destructive/10 text-destructive mt-4 rounded-md border px-3 py-2 text-sm"
+          }
         >
           {error}
+          {limitReached ? (
+            <span className="text-muted-foreground mt-1 block">
+              Nothing is lost — your progress is saved. Come back tomorrow and
+              pick up where you left off.
+            </span>
+          ) : null}
         </p>
       ) : null}
 
@@ -140,12 +166,18 @@ export function TutorChat({
         <input
           value={input}
           onChange={(event) => setInput(event.target.value)}
-          placeholder="Ask about this lesson…"
+          placeholder={
+            limitReached ? "Back tomorrow…" : "Ask about this lesson…"
+          }
           aria-label="Ask your instructor a question"
           maxLength={4000}
-          className="border-input bg-background focus-visible:ring-ring flex-1 rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
+          disabled={limitReached}
+          className="border-input bg-background focus-visible:ring-ring flex-1 rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:opacity-60"
         />
-        <Button type="submit" disabled={streaming || !input.trim()}>
+        <Button
+          type="submit"
+          disabled={streaming || limitReached || !input.trim()}
+        >
           {streaming ? "Thinking…" : "Ask"}
         </Button>
       </form>
