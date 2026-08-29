@@ -90,13 +90,19 @@ export async function reserveTutorMessage(
     }
   }
 
-  const { data: newCount, error } = await admin.rpc("consume_tutor_message", {
+  // The limit is passed into the function so the check and the increment are
+  // one atomic statement. A request the limiter refuses must not advance the
+  // counter -- being blocked should not push a student further past the cap.
+  const { data, error } = await admin.rpc("consume_tutor_message", {
     p_user_id: userId,
+    p_limit: limits.dailyMessagesPerUser,
   });
+
+  const row = Array.isArray(data) ? data[0] : data;
 
   // Fail closed. If we cannot record the attempt we cannot enforce the cap,
   // so we decline rather than let an uncounted request through.
-  if (error || typeof newCount !== "number") {
+  if (error || !row || typeof row.allowed !== "boolean") {
     return {
       allowed: false,
       scope: "user",
@@ -105,16 +111,18 @@ export async function reserveTutorMessage(
     };
   }
 
-  if (newCount > limits.dailyMessagesPerUser) {
+  const used = Number(row.message_count ?? 0);
+
+  if (!row.allowed) {
     return {
       allowed: false,
       scope: "user",
-      used: newCount,
+      used,
       limit: limits.dailyMessagesPerUser,
     };
   }
 
-  return { allowed: true, used: newCount, limit: limits.dailyMessagesPerUser };
+  return { allowed: true, used, limit: limits.dailyMessagesPerUser };
 }
 
 export function estimateCostCents(usage: {
