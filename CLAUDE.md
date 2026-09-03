@@ -138,7 +138,6 @@ Explicitly out of scope for that sprint: VR, live flight-school booking, full me
 **Known open bugs:**
 - PKCE same-browser requirement breaks confirmation links opened on a different device. Mobile-first audience will hit this constantly. Needs either a clearer error or a flow that works cross-device.
 - `http://localhost:3100/auth/callback` still in the production redirect allow-list.
-- **Guardian consent link missing.** The `consent` INSERT policy allows any authenticated user to insert a row with `granted_by_relationship = 'guardian'` for any `subject_user_id`, because no guardian-to-student link table exists yet. Until one does, guardian consent must be written by the service role only, never from the client. **This blocks onboarding students under 18.**
 
 ---
 
@@ -147,6 +146,8 @@ Explicitly out of scope for that sprint: VR, live flight-school booking, full me
 **1. Lesson content is hardcoded** in `src/lib/curriculum.ts`. Adding or editing a lesson requires a code change and a deploy. Neither the founder nor a CFI can fix a typo. This must move to the database — the product's entire value is curriculum.
 
 **2. Progress tracking is a checkbox.** `lesson_progress` stores one three-state flag per lesson. No per-objective tracking, no mastery score. A student who clicked through everything looks identical to one who mastered it.
+
+**3. Every existing production account has a null `date_of_birth`.** `0005` made the column nullable because production already had users. `is_adult()` fails closed, so no current user can self-grant `live_session` consent until date of birth is backfilled. This is correct safety behavior, not a bug — but it becomes a real constraint the moment live sessions are built, and the backfill is a prerequisite for that work, not an afterthought.
 
 **Per-objective mastery is the highest-leverage item on the roadmap.** It does three jobs at once: makes lessons feel personal, makes CFI endorsements defensible, and produces the outcome reporting that renews institutional contracts.
 
@@ -191,6 +192,34 @@ These are settled. Do not relitigate them without a reason.
 - No mentor leaderboard. It turns a supportive community competitive and punishes whoever took the hardest student.
 - Aggregate reporting by default. No individual identifiable unless they opted in.
 - "Real time" is the wrong target. Daily refresh is enough; these milestones happen months apart.
+
+---
+
+## Guardian links and tiered consent — `0007`
+
+Closes the guardian consent gap: the old `consent` INSERT policy let any authenticated user insert a `guardian` row for any `subject_user_id`. All four boundary cases were verified against production.
+
+**`guardian_links`** — relational guardianship. "Is a guardian" is not a useful fact; "is guardian of this student" is. Same reasoning that put org roles in `organization_members` rather than on `profiles`.
+
+- `guardian_user_id` is **nullable**, because an invite exists before the guardian has an account. `invited_email` carries the pending case.
+- `verification_method`: `email_invite` / `school_roster` / `staff_manual`.
+- Check constraints make bad states unrepresentable rather than merely discouraged: a `verified` row must have both an account and a `verified_at`, a guardian cannot be the student, and every row must identify a guardian one way or the other.
+
+**Three helper functions:**
+
+| Function | Answers |
+|---|---|
+| `is_verified_guardian_of(student)` | Is the caller a verified guardian of this student? |
+| `is_strongly_verified_guardian_of(student)` | Same, but only `school_roster` or `staff_manual` |
+| `is_adult(subject)` | Is this person 18 or older, by date of birth? |
+
+**Replaced consent INSERT policy** — `"Grant consent for yourself"` is dropped and replaced by `"Grant consent as self or verified guardian"`.
+
+### Locked design decisions
+
+- **`guardian_links` is client-readable only.** Every write goes through a server route using the service role. Verification is the entire security property here, and it belongs in code that can be written and reviewed carefully — not in a policy expression.
+- **Consent verification is tiered.** `email_invite` is sufficient for `school_progress` and `sponsor_milestones`. `live_session` requires `school_roster` or `staff_manual`, because clicking a link proves control of a mailbox, not guardianship — a student with a second email address satisfies it.
+- **`is_adult()` fails closed on a null `date_of_birth`.** Unknown age is treated as a minor, so self-granting `live_session` requires a date of birth on file. Erring toward "minor" is the only safe direction when the subject may be a child.
 
 ---
 
