@@ -15,6 +15,15 @@ type AuthFormProps = {
   next?: string;
   /** Signup only. Optional — the tutor handles an unknown name gracefully. */
   askFirstName?: boolean;
+  /** Signup only. Required when asked — the 13+ age gate depends on it. */
+  askDateOfBirth?: boolean;
+  /**
+   * Latest allowed date of birth, `YYYY-MM-DD`, computed on the server.
+   * This component must not compute it: a date derived during render can
+   * differ between the server pass and the client pass across a midnight
+   * boundary, which is a hydration mismatch.
+   */
+  maxDateOfBirth?: string;
 };
 
 function SubmitButton({
@@ -60,6 +69,8 @@ export function AuthForm({
   passwordHint,
   next,
   askFirstName,
+  askDateOfBirth,
+  maxDateOfBirth,
 }: AuthFormProps) {
   const [state, formAction] = useActionState<AuthState, FormData>(action, {});
 
@@ -86,6 +97,24 @@ export function AuthForm({
         </div>
       ) : null}
 
+      {askDateOfBirth ? (
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="dateOfBirth">Date of birth</Label>
+          <Input
+            id="dateOfBirth"
+            name="dateOfBirth"
+            type="date"
+            required
+            min="1900-01-01"
+            max={maxDateOfBirth}
+          />
+          <p className="text-muted-foreground text-xs text-pretty">
+            You must be at least 13 to sign up. Under 18, a parent or guardian
+            will need to approve some features.
+          </p>
+        </div>
+      ) : null}
+
       <div className="flex flex-col gap-2">
         <Label htmlFor="email">Email</Label>
         <Input
@@ -104,7 +133,7 @@ export function AuthForm({
           id="password"
           name="password"
           type="password"
-          autoComplete="current-password"
+          autoComplete={askFirstName ? "new-password" : "current-password"}
           required
         />
         {passwordHint ? (

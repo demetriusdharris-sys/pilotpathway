@@ -48,6 +48,71 @@ function studentFacingError(message: string): string {
   return message;
 }
 
+const DATE_OF_BIRTH_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+const IMPLAUSIBLE_DATE_OF_BIRTH =
+  "That date doesn't look right. Use the date picker.";
+
+/**
+ * Returns a student-facing error, or undefined when the date of birth clears
+ * the 13+ gate.
+ *
+ * Every comparison here is on the year / month / day integers. Handing the
+ * string to `new Date()` would parse it as UTC midnight, which is the previous
+ * calendar day everywhere west of Greenwich — California included — so a
+ * student who is exactly 13 today would be told they are 12.
+ */
+function dateOfBirthError(value: string): string | undefined {
+  if (!value) {
+    return "Enter your date of birth.";
+  }
+  if (!DATE_OF_BIRTH_PATTERN.test(value)) {
+    return IMPLAUSIBLE_DATE_OF_BIRTH;
+  }
+
+  const [year, month, day] = value.split("-").map(Number);
+
+  // Local-time construction, and a round-trip through it rejects dates that
+  // match the pattern but do not exist, such as 2010-02-30 or month 13.
+  const asDate = new Date(year, month - 1, day);
+  if (
+    asDate.getFullYear() !== year ||
+    asDate.getMonth() !== month - 1 ||
+    asDate.getDate() !== day
+  ) {
+    return IMPLAUSIBLE_DATE_OF_BIRTH;
+  }
+
+  if (year < 1900) {
+    return IMPLAUSIBLE_DATE_OF_BIRTH;
+  }
+
+  const today = new Date();
+  const todayYear = today.getFullYear();
+  const todayMonth = today.getMonth() + 1;
+  const todayDay = today.getDate();
+
+  const isFuture =
+    year > todayYear ||
+    (year === todayYear &&
+      (month > todayMonth || (month === todayMonth && day > todayDay)));
+  if (isFuture) {
+    return IMPLAUSIBLE_DATE_OF_BIRTH;
+  }
+
+  // Has the 13th birthday already arrived, on the same calendar?
+  const thirteenthYear = year + 13;
+  const hasTurnedThirteen =
+    thirteenthYear < todayYear ||
+    (thirteenthYear === todayYear &&
+      (month < todayMonth || (month === todayMonth && day <= todayDay)));
+  if (!hasTurnedThirteen) {
+    return "You need to be at least 13 to sign up. Come back when you are — aviation will still be here.";
+  }
+
+  return undefined;
+}
+
 function safeNext(value: FormDataEntryValue | null) {
   const next = String(value ?? "");
   // Only allow same-origin relative paths, never a protocol-relative URL.
@@ -71,6 +136,15 @@ export async function signUp(
     return { error: "Use at least 8 characters for your password." };
   }
 
+  // The age gate is decided here, before any account exists. The browser's
+  // min/max on the date input is a convenience, not a control.
+  const dateOfBirth = String(formData.get("dateOfBirth") ?? "").trim();
+  const ageError = dateOfBirthError(dateOfBirth);
+
+  if (ageError) {
+    return { error: ageError };
+  }
+
   const supabase = await createClient();
   const origin = (await headers()).get("origin");
 
@@ -85,7 +159,10 @@ export async function signUp(
     password,
     options: {
       emailRedirectTo: `${origin}/auth/callback`,
-      data: firstName ? { first_name: firstName } : undefined,
+      data: {
+        date_of_birth: dateOfBirth,
+        ...(firstName ? { first_name: firstName } : {}),
+      },
     },
   });
 
