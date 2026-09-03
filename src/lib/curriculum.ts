@@ -15,12 +15,32 @@
 
 export type LessonSource = "PHAK" | "AFH" | "AIM" | "14 CFR";
 
+/**
+ * A single learning objective.
+ *
+ * `id` IS PERMANENT. Once assigned, an id must never be regenerated or
+ * changed. Mastery records reference these strings: `objective_signals` and
+ * `objective_assessments` store them, and `learning_objectives` mirrors this
+ * file. Rewording `text` is fine and expected — it is still the same
+ * objective, and every student's history stays attached to it. Changing an id
+ * orphans that history silently: the old records survive, pointing at an
+ * objective that no longer exists, and the student's mastery resets to zero.
+ *
+ * To remove an objective, delete it here and set `retired_at` on the mirrored
+ * row. Never reuse a retired id for something else.
+ */
+export type LearningObjective = {
+  id: string;
+  text: string;
+  isSafetyCritical?: boolean;
+};
+
 export type Lesson = {
   slug: string;
   title: string;
   objective: string;
   summary: string;
-  objectives: string[];
+  objectives: LearningObjective[];
   sources: LessonSource[];
   /** Private Pilot ACS Areas of Operation, by name. */
   acsAreas: string[];
@@ -50,9 +70,18 @@ const stageOneLessons: Lesson[] = [
     summary:
       "What you are signing up for, who does what, and how you will know you are making progress.",
     objectives: [
-      "Describe the path from first lesson to private pilot certificate",
-      "Explain what the ACS is and how it sets the standard",
-      "State what a human CFI must do that an AI instructor cannot",
+      {
+        id: "s1-welcome.training-path",
+        text: "Describe the path from first lesson to private pilot certificate",
+      },
+      {
+        id: "s1-welcome.what-is-the-acs",
+        text: "Explain what the ACS is and how it sets the standard",
+      },
+      {
+        id: "s1-welcome.cfi-vs-ai",
+        text: "State what a human CFI must do that an AI instructor cannot",
+      },
     ],
     sources: ["14 CFR", "PHAK"],
     acsAreas: ["Preflight Preparation"],
@@ -67,9 +96,20 @@ const stageOneLessons: Lesson[] = [
     summary:
       "Two checklists that run on you and your situation, not the airplane. The first real pilot decision you will make.",
     objectives: [
-      "Apply the IMSAFE checklist to your own condition before a flight",
-      "Apply the PAVE checklist to pilot, aircraft, environment, and external pressure",
-      "Describe the hazardous attitudes and their antidotes",
+      {
+        id: "s1-imsafe-pave.imsafe-checklist",
+        text: "Apply the IMSAFE checklist to your own condition before a flight",
+        isSafetyCritical: true,
+      },
+      {
+        id: "s1-imsafe-pave.pave-checklist",
+        text: "Apply the PAVE checklist to pilot, aircraft, environment, and external pressure",
+        isSafetyCritical: true,
+      },
+      {
+        id: "s1-imsafe-pave.hazardous-attitudes",
+        text: "Describe the hazardous attitudes and their antidotes",
+      },
     ],
     sources: ["PHAK", "AIM"],
     acsAreas: ["Preflight Preparation"],
@@ -85,9 +125,18 @@ const stageOneLessons: Lesson[] = [
     summary:
       "Naming the pieces, and knowing what each one is for when you are standing at the airplane.",
     objectives: [
-      "Identify the primary flight controls and the axis each one works about",
-      "Describe what flaps do and when they are used",
-      "Name the major components of a typical training airplane",
+      {
+        id: "s1-airplane-parts.primary-controls",
+        text: "Identify the primary flight controls and the axis each one works about",
+      },
+      {
+        id: "s1-airplane-parts.flaps",
+        text: "Describe what flaps do and when they are used",
+      },
+      {
+        id: "s1-airplane-parts.major-components",
+        text: "Name the major components of a typical training airplane",
+      },
     ],
     sources: ["PHAK"],
     acsAreas: ["Preflight Preparation"],
@@ -103,9 +152,19 @@ const stageOneLessons: Lesson[] = [
     summary:
       "The four forces, angle of attack, and why a stall is about angle — not speed.",
     objectives: [
-      "Name the four forces and describe how they act in steady flight",
-      "Explain how angle of attack relates to lift",
-      "Describe a stall in terms of angle of attack rather than airspeed",
+      {
+        id: "s1-four-forces.four-forces",
+        text: "Name the four forces and describe how they act in steady flight",
+      },
+      {
+        id: "s1-four-forces.aoa-and-lift",
+        text: "Explain how angle of attack relates to lift",
+      },
+      {
+        id: "s1-four-forces.stall-is-aoa",
+        text: "Describe a stall in terms of angle of attack rather than airspeed",
+        isSafetyCritical: true,
+      },
     ],
     sources: ["PHAK"],
     acsAreas: ["Preflight Preparation"],
@@ -119,9 +178,18 @@ const stageOneLessons: Lesson[] = [
     summary:
       "How the airplane moves about three axes, and why a stable airplane wants to fly straight.",
     objectives: [
-      "Describe motion about the lateral, longitudinal, and vertical axes",
-      "Explain the difference between stability and controllability",
-      "Describe what adverse yaw is and how it is corrected",
+      {
+        id: "s1-axes-stability.three-axes",
+        text: "Describe motion about the lateral, longitudinal, and vertical axes",
+      },
+      {
+        id: "s1-axes-stability.stability-vs-control",
+        text: "Explain the difference between stability and controllability",
+      },
+      {
+        id: "s1-axes-stability.adverse-yaw",
+        text: "Describe what adverse yaw is and how it is corrected",
+      },
     ],
     sources: ["PHAK"],
     acsAreas: ["Preflight Preparation"],
@@ -136,9 +204,20 @@ const stageOneLessons: Lesson[] = [
     summary:
       "Where the fuel goes, what the magnetos are for, and why running a tank dry is a decision, not an accident.",
     objectives: [
-      "Trace the fuel system from tank to engine on a typical trainer",
-      "Explain why there are two magnetos and what the runup check confirms",
-      "Describe how to verify fuel quantity and quality before flight",
+      {
+        id: "s1-engines-fuel.fuel-system-path",
+        text: "Trace the fuel system from tank to engine on a typical trainer",
+        isSafetyCritical: true,
+      },
+      {
+        id: "s1-engines-fuel.magnetos-and-runup",
+        text: "Explain why there are two magnetos and what the runup check confirms",
+      },
+      {
+        id: "s1-engines-fuel.verify-fuel",
+        text: "Describe how to verify fuel quantity and quality before flight",
+        isSafetyCritical: true,
+      },
     ],
     sources: ["PHAK", "AFH"],
     acsAreas: ["Preflight Preparation"],
@@ -152,9 +231,18 @@ const stageOneLessons: Lesson[] = [
     summary:
       "The six-pack, what drives each instrument, and how to spot one that is lying to you.",
     objectives: [
-      "Identify which instruments are pitot-static and which are gyroscopic",
-      "Describe the indications of a blocked pitot tube and a blocked static port",
-      "Explain what each instrument in the primary group tells you",
+      {
+        id: "s1-pitot-static-gyro.instrument-groups",
+        text: "Identify which instruments are pitot-static and which are gyroscopic",
+      },
+      {
+        id: "s1-pitot-static-gyro.blocked-pitot-static",
+        text: "Describe the indications of a blocked pitot tube and a blocked static port",
+      },
+      {
+        id: "s1-pitot-static-gyro.six-pack-readings",
+        text: "Explain what each instrument in the primary group tells you",
+      },
     ],
     sources: ["PHAK"],
     acsAreas: ["Preflight Preparation"],
@@ -169,9 +257,19 @@ const stageOneLessons: Lesson[] = [
     summary:
       "How to move around an airport without guessing — and without ending up somewhere you should not be.",
     objectives: [
-      "Determine runway numbers from magnetic heading",
-      "Interpret common runway and taxiway markings and signs",
-      "Explain what hold short means and why it is never optional",
+      {
+        id: "s1-airport-ramp.runway-numbering",
+        text: "Determine runway numbers from magnetic heading",
+      },
+      {
+        id: "s1-airport-ramp.markings-and-signs",
+        text: "Interpret common runway and taxiway markings and signs",
+      },
+      {
+        id: "s1-airport-ramp.hold-short",
+        text: "Explain what hold short means and why it is never optional",
+        isSafetyCritical: true,
+      },
     ],
     sources: ["PHAK", "AIM"],
     acsAreas: ["Airport and Seaplane Base Operations"],
@@ -187,9 +285,18 @@ const stageOneLessons: Lesson[] = [
     summary:
       "What to say, when to say it, and what to do when you say it wrong. Everyone sounds rough at first.",
     objectives: [
-      "Build a standard radio call: who you are calling, who you are, where you are, what you want",
-      "Describe operating at a nontowered airport using the CTAF",
-      "Explain what to do after a readback error or a missed call",
+      {
+        id: "s1-radio.standard-call",
+        text: "Build a standard radio call: who you are calling, who you are, where you are, what you want",
+      },
+      {
+        id: "s1-radio.nontowered-ctaf",
+        text: "Describe operating at a nontowered airport using the CTAF",
+      },
+      {
+        id: "s1-radio.readback-errors",
+        text: "Explain what to do after a readback error or a missed call",
+      },
     ],
     sources: ["AIM"],
     acsAreas: ["Airport and Seaplane Base Operations"],
@@ -205,9 +312,19 @@ const stageOneLessons: Lesson[] = [
     summary:
       "Classes of airspace, what each one asks of you, and how to tell which one you are in.",
     objectives: [
-      "Describe the dimensions and entry requirements of each airspace class",
-      "State the basic VFR weather minimums a student pilot will use",
-      "Identify airspace boundaries on a sectional chart",
+      {
+        id: "s1-airspace-intro.airspace-classes",
+        text: "Describe the dimensions and entry requirements of each airspace class",
+      },
+      {
+        id: "s1-airspace-intro.vfr-minimums",
+        text: "State the basic VFR weather minimums a student pilot will use",
+        isSafetyCritical: true,
+      },
+      {
+        id: "s1-airspace-intro.sectional-boundaries",
+        text: "Identify airspace boundaries on a sectional chart",
+      },
     ],
     sources: ["PHAK", "AIM", "14 CFR"],
     acsAreas: ["Preflight Preparation"],
@@ -222,9 +339,18 @@ const stageOneLessons: Lesson[] = [
     summary:
       "Why air moves, how clouds form, and the weather that decides whether you fly today.",
     objectives: [
-      "Describe how temperature, pressure, and moisture drive weather",
-      "Read a METAR and a TAF and say what they mean in plain language",
-      "Explain the conditions that produce fog, thunderstorms, and icing",
+      {
+        id: "s1-weather-intro.weather-drivers",
+        text: "Describe how temperature, pressure, and moisture drive weather",
+      },
+      {
+        id: "s1-weather-intro.metar-and-taf",
+        text: "Read a METAR and a TAF and say what they mean in plain language",
+      },
+      {
+        id: "s1-weather-intro.fog-storms-icing",
+        text: "Explain the conditions that produce fog, thunderstorms, and icing",
+      },
     ],
     sources: ["PHAK"],
     acsAreas: ["Preflight Preparation"],
@@ -239,9 +365,19 @@ const stageOneLessons: Lesson[] = [
     summary:
       "The regulation that makes you the final authority, and what that actually costs you.",
     objectives: [
-      "Describe the authority and responsibility of the pilot in command",
-      "Describe student pilot privileges and limitations",
-      "Identify the documents required aboard the aircraft and on your person",
+      {
+        id: "s1-regs-pic.pic-authority",
+        text: "Describe the authority and responsibility of the pilot in command",
+        isSafetyCritical: true,
+      },
+      {
+        id: "s1-regs-pic.student-limitations",
+        text: "Describe student pilot privileges and limitations",
+      },
+      {
+        id: "s1-regs-pic.required-documents",
+        text: "Identify the documents required aboard the aircraft and on your person",
+      },
     ],
     sources: ["14 CFR", "AIM"],
     acsAreas: ["Preflight Preparation"],
@@ -257,9 +393,18 @@ const stageOneLessons: Lesson[] = [
     summary:
       "Airworthiness, the walkaround, and the habit of never taking someone's word that the airplane is fine.",
     objectives: [
-      "Determine whether an aircraft is airworthy before flight",
-      "Perform a systematic preflight inspection using the checklist",
-      "Describe proper engine starting, taxi, and runup procedures",
+      {
+        id: "s1-preflight.airworthiness",
+        text: "Determine whether an aircraft is airworthy before flight",
+      },
+      {
+        id: "s1-preflight.walkaround-flow",
+        text: "Perform a systematic preflight inspection using the checklist",
+      },
+      {
+        id: "s1-preflight.start-taxi-runup",
+        text: "Describe proper engine starting, taxi, and runup procedures",
+      },
     ],
     sources: ["AFH", "PHAK"],
     acsAreas: ["Preflight Procedures"],
@@ -275,9 +420,21 @@ const stageOneLessons: Lesson[] = [
     summary:
       "The most misunderstood idea in flying, and the one that matters most close to the ground.",
     objectives: [
-      "Explain why a wing can stall at any airspeed and any attitude",
-      "Describe the indications that precede a stall",
-      "Describe the general stall recovery procedure and why spin awareness matters",
+      {
+        id: "s1-stalls.stall-any-airspeed",
+        text: "Explain why a wing can stall at any airspeed and any attitude",
+        isSafetyCritical: true,
+      },
+      {
+        id: "s1-stalls.stall-warning-signs",
+        text: "Describe the indications that precede a stall",
+        isSafetyCritical: true,
+      },
+      {
+        id: "s1-stalls.stall-recovery-spins",
+        text: "Describe the general stall recovery procedure and why spin awareness matters",
+        isSafetyCritical: true,
+      },
     ],
     sources: ["PHAK", "AFH"],
     acsAreas: ["Slow Flight and Stalls"],
@@ -292,9 +449,19 @@ const stageOneLessons: Lesson[] = [
     summary:
       "The shape every airport flies, and how to fit into it without surprising anyone.",
     objectives: [
-      "Describe a standard traffic pattern and each of its legs",
-      "State the basic right-of-way rules that apply in the pattern",
-      "Explain when and why to go around",
+      {
+        id: "s1-pattern.pattern-legs",
+        text: "Describe a standard traffic pattern and each of its legs",
+      },
+      {
+        id: "s1-pattern.right-of-way",
+        text: "State the basic right-of-way rules that apply in the pattern",
+        isSafetyCritical: true,
+      },
+      {
+        id: "s1-pattern.go-around",
+        text: "Explain when and why to go around",
+      },
     ],
     sources: ["AIM", "AFH", "14 CFR"],
     acsAreas: ["Takeoffs, Landings, and Go-Arounds"],
@@ -309,9 +476,18 @@ const stageOneLessons: Lesson[] = [
     summary:
       "The last knowledge checkpoint before the day the instructor gets out of the airplane.",
     objectives: [
-      "Describe the knowledge and endorsements required before solo flight",
-      "Explain the limitations that apply to a student pilot flying solo",
-      "State who is authorized to endorse you and who is not",
+      {
+        id: "s1-solo-knowledge.solo-endorsements",
+        text: "Describe the knowledge and endorsements required before solo flight",
+      },
+      {
+        id: "s1-solo-knowledge.solo-limitations",
+        text: "Explain the limitations that apply to a student pilot flying solo",
+      },
+      {
+        id: "s1-solo-knowledge.who-can-endorse",
+        text: "State who is authorized to endorse you and who is not",
+      },
     ],
     sources: ["14 CFR", "AFH"],
     acsAreas: ["Preflight Preparation"],

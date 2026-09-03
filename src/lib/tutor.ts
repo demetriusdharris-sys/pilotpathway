@@ -161,7 +161,7 @@ Lesson id: ${lesson.slug}
 Lesson title: ${lesson.title}
 Objective: ${lesson.objective}
 Learning objectives:
-${lesson.objectives.map((objective) => `- ${objective}`).join("\n")}
+${lesson.objectives.map((objective) => `- ${objective.text}`).join("\n")}
 ACS area of operation: ${lesson.acsAreas.join(", ")}
 Topic: ${lesson.topic}
 Reference sources: ${lesson.sources.join(", ")}

@@ -80,11 +80,11 @@ export default async function LessonPage({ params }: LessonPageProps) {
         </h2>
         <ul className="mt-4 flex flex-col gap-3">
           {lesson.objectives.map((objective) => (
-            <li key={objective} className="flex gap-3 text-sm text-pretty">
+            <li key={objective.id} className="flex gap-3 text-sm text-pretty">
               <span aria-hidden className="text-gold mt-px">
                 ✓
               </span>
-              <span>{objective}</span>
+              <span>{objective.text}</span>
             </li>
           ))}
         </ul>
