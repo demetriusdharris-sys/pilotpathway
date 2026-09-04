@@ -1,3 +1,18 @@
+> **ARCHIVED — DO NOT FOLLOW THIS SPEC.**
+>
+> This is a historical build spec from August 2026. It was already executed, and
+> the app has moved on from it. It is kept for provenance only.
+>
+> It is out of date in at least three ways that will cause real breakage if
+> anyone follows it now:
+>
+> - It references `lesson_id`, where the live table uses `lesson_slug`.
+> - It specifies `claude-sonnet-4-5`, where the tutor runs `claude-sonnet-5`.
+> - It instructs `temperature: 0.4`, which `claude-sonnet-5` rejects with a 400.
+>
+> For current instructions, read `CLAUDE.md` at the repo root. That file, not
+> this one, is the source of truth.
+
 # Claude Code Task: Implement PilotPathway AI Ground Instructor
 
 Read this entire file before writing code. Execute it in the existing PilotPathway Next.js app at C:\Users\demet\pilotpathway (or the current project root). Do not restart product discovery. Do not rebuild the Replit mentorship hub.
