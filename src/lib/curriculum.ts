@@ -109,6 +109,7 @@ const stageOneLessons: Lesson[] = [
       {
         id: "s1-imsafe-pave.hazardous-attitudes",
         text: "Describe the hazardous attitudes and their antidotes",
+        isSafetyCritical: true,
       },
     ],
     sources: ["PHAK", "AIM"],
@@ -350,6 +351,7 @@ const stageOneLessons: Lesson[] = [
       {
         id: "s1-weather-intro.fog-storms-icing",
         text: "Explain the conditions that produce fog, thunderstorms, and icing",
+        isSafetyCritical: true,
       },
     ],
     sources: ["PHAK"],
@@ -373,6 +375,7 @@ const stageOneLessons: Lesson[] = [
       {
         id: "s1-regs-pic.student-limitations",
         text: "Describe student pilot privileges and limitations",
+        isSafetyCritical: true,
       },
       {
         id: "s1-regs-pic.required-documents",
@@ -461,6 +464,7 @@ const stageOneLessons: Lesson[] = [
       {
         id: "s1-pattern.go-around",
         text: "Explain when and why to go around",
+        isSafetyCritical: true,
       },
     ],
     sources: ["AIM", "AFH", "14 CFR"],
