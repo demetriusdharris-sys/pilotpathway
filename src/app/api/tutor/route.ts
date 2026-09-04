@@ -22,6 +22,10 @@ import {
   loadConversation,
   saveMessage,
 } from "@/lib/instructor-messages";
+import {
+  estimateSignalCostCents,
+  extractObjectiveSignals,
+} from "@/lib/objective-signals";
 import { buildMasteryNotes } from "@/lib/mastery";
 import { getProgress } from "@/lib/progress";
 
@@ -329,7 +333,7 @@ export async function POST(request: NextRequest) {
         // answer saved here would be replayed as history on every later turn,
         // and the tutor would treat its own truncated sentence as something
         // it had taught.
-        await saveMessage(
+        const assistantMessageId = await saveMessage(
           supabase,
           user.id,
           found.lesson.slug,
@@ -338,6 +342,63 @@ export async function POST(request: NextRequest) {
         );
 
         await recordTutorCost(admin, user.id, estimateCostCents(final.usage));
+
+        // Mastery inference runs after the student already has their answer.
+        // It gets its own try/catch rather than riding the outer one: a failure
+        // here must not append the "connection dropped" note to a reply that
+        // arrived perfectly well, and must not stop controller.close().
+        try {
+          const { signals, usage: signalUsage } = await extractObjectiveSignals(
+            found.lesson,
+            question,
+            reply,
+          );
+
+          // Deliberately NOT recordTutorCost. That meters the student's daily
+          // message quota, and inference we chose to run on their conversation
+          // is our cost, not their usage. Logged so it stays visible.
+          if (signalUsage) {
+            console.info("Objective signal call:", {
+              userId: user.id,
+              lesson: found.lesson.slug,
+              signals: signals.length,
+              costCents: estimateSignalCostCents(signalUsage),
+            });
+          }
+
+          // The service role is required: objective_signals has no client
+          // INSERT policy, by design — a student who can write their own
+          // readings has a mastery record that means nothing.
+          if (signals.length > 0 && assistantMessageId) {
+            const { error: signalError } = await admin
+              .from("objective_signals")
+              .insert(
+                signals.map((signal) => ({
+                  user_id: user.id,
+                  objective_id: signal.objectiveId,
+                  reading: signal.reading,
+                  confidence: signal.confidence,
+                  lesson_slug: found.lesson.slug,
+                  source_message_id: assistantMessageId,
+                })),
+              );
+
+            if (signalError) {
+              console.error("Failed to write objective signals:", {
+                userId: user.id,
+                lesson: found.lesson.slug,
+                count: signals.length,
+                error: signalError.message,
+              });
+            }
+          }
+        } catch (error) {
+          console.error("Objective signal step failed:", {
+            userId: user.id,
+            lesson: found.lesson.slug,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
       } catch (error) {
         // Headers are already sent, so the status cannot be changed. Log the
         // real cause with full detail so this is visible in monitoring rather

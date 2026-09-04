@@ -37,6 +37,19 @@ export type ObjectiveSignal = {
   confidence: SignalConfidence;
 };
 
+/** Token usage from the judge call, for cost logging. Null when no call ran. */
+export type SignalUsage = {
+  input_tokens?: number | null;
+  output_tokens?: number | null;
+  cache_read_input_tokens?: number | null;
+  cache_creation_input_tokens?: number | null;
+};
+
+export type ObjectiveSignalResult = {
+  signals: ObjectiveSignal[];
+  usage: SignalUsage | null;
+};
+
 function buildSystemPrompt(lesson: Lesson): string {
   const objectives = lesson.objectives
     .map((objective) => `${objective.id}: ${objective.text}`)
@@ -170,14 +183,17 @@ function parseSignals(raw: string, lesson: Lesson): ObjectiveSignal[] {
  * infer mastery must never surface as a failed tutor turn — an empty array
  * means "we learned nothing from this exchange," which is also the honest
  * answer when the judge is unavailable.
+ *
+ * Usage is returned alongside the signals so the caller can log what the judge
+ * cost. It is null when no upstream call was made or the call failed.
  */
 export async function extractObjectiveSignals(
   lesson: Lesson,
   studentQuestion: string,
   tutorReply: string,
-): Promise<ObjectiveSignal[]> {
+): Promise<ObjectiveSignalResult> {
   if (lesson.objectives.length === 0) {
-    return [];
+    return { signals: [], usage: null };
   }
 
   try {
@@ -203,13 +219,13 @@ ${tutorReply}`,
       .map((block) => (block.type === "text" ? block.text : ""))
       .join("");
 
-    return parseSignals(text, lesson);
+    return { signals: parseSignals(text, lesson), usage: response.usage };
   } catch (error) {
     console.error(
       "Objective signal extraction failed:",
       error instanceof Error ? error.message : error,
     );
-    return [];
+    return { signals: [], usage: null };
   }
 }
 

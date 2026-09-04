@@ -52,22 +52,34 @@ export async function countConversation(
   return error || count === null ? 0 : count;
 }
 
+/**
+ * Saves one message and returns its id, or null if nothing was written.
+ *
+ * The id is what lets a later inference point back at the exchange that
+ * produced it — see source_message_id on objective_signals. Null is a normal
+ * outcome (empty content, failed insert), so callers that need the id must
+ * check it rather than assume a row exists.
+ */
 export async function saveMessage(
   supabase: SupabaseClient,
   userId: string,
   lessonSlug: string,
   role: TutorMessage["role"],
   content: string,
-): Promise<void> {
+): Promise<string | null> {
   const trimmed = content.trim();
-  if (!trimmed) return;
+  if (!trimmed) return null;
 
-  const { error } = await supabase.from("instructor_messages").insert({
-    user_id: userId,
-    lesson_slug: lessonSlug,
-    role,
-    content: trimmed,
-  });
+  const { data, error } = await supabase
+    .from("instructor_messages")
+    .insert({
+      user_id: userId,
+      lesson_slug: lessonSlug,
+      role,
+      content: trimmed,
+    })
+    .select("id")
+    .single();
 
   if (error) {
     console.error("Failed to save instructor message:", {
@@ -75,5 +87,8 @@ export async function saveMessage(
       lessonSlug,
       error: error.message,
     });
+    return null;
   }
+
+  return typeof data?.id === "string" ? data.id : null;
 }
