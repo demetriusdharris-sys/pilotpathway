@@ -69,6 +69,8 @@ Vercel can serve an older deployment than `master` contains. Check what is actua
 - **GoDaddy DNS:** the Name field must exclude the domain. `resend._domainkey`, not `resend._domainkey.pilotpathway.ai`.
 - **Middleware:** must not run on non-GET requests. `NextResponse.next({ request })` clones the request body and hangs on Server Action POSTs, causing `MIDDLEWARE_INVOCATION_TIMEOUT`. Login and signup are the only Server Actions in the app.
 - **Supabase SQL Editor wraps a multi-statement paste in a single transaction.** A failure partway through rolls the whole paste back, so there is no partial state to clean up — but also no partial progress. Fix the statement that failed and re-run the entire migration.
+- **`0010` is written for the Supabase SQL Editor specifically.** Because the editor supplies the transaction, an explicit `begin;`/`commit;` inside the file conflicts with that wrapper and caused the temp table to drop early. The file therefore opens no transaction of its own and drops its temp table explicitly. Run through `psql` it would not be atomic: each statement would autocommit, so the refusal check would fire after the writes had already landed.
+- **The founder runs git commands in a separate PowerShell window**, at the direction of a chat session. `origin/master` moving forward without Claude Code having pushed is expected and normal. This has been misdiagnosed as an automatic push three times — check this note before reporting it as an anomaly again.
 
 ---
 
@@ -122,10 +124,12 @@ Explicitly out of scope for that sprint: VR, live flight-school booking, full me
 
 ---
 
-## Current state (as of Aug 31, 2026)
+## Current state (as of Sep 4, 2026)
 
 **Working in production:**
 - Signup / login with email confirmation enforced
+- Signup collects date of birth behind a 13+ age gate, validated server-side in the Server Action before Supabase is called. Verified on the live site.
+- `date_of_birth` carried through signup metadata into `profiles`. Verified on the live site.
 - Curriculum: 16 Stage 1 lessons (Stages 2 and 3 are outline labels only)
 - Captain Path tutor chat with conversation memory persisted to `instructor_messages`
 - `studentFirstName` and `masteryNotes` wired to real values (previously dead parameters)
@@ -138,6 +142,7 @@ Explicitly out of scope for that sprint: VR, live flight-school booking, full me
 **Known open bugs:**
 - PKCE same-browser requirement breaks confirmation links opened on a different device. Mobile-first audience will hit this constantly. Needs either a clearer error or a flow that works cross-device.
 - `http://localhost:3100/auth/callback` still in the production redirect allow-list.
+- `guardian_links` and both mastery streams exist in the database with no product surface. Nothing in the app writes to any of them.
 
 ---
 
@@ -148,6 +153,8 @@ Explicitly out of scope for that sprint: VR, live flight-school booking, full me
 **2. Progress tracking is a checkbox.** `lesson_progress` stores one three-state flag per lesson. No per-objective tracking, no mastery score. A student who clicked through everything looks identical to one who mastered it.
 
 **3. Every existing production account has a null `date_of_birth`.** `0005` made the column nullable because production already had users. `is_adult()` fails closed, so no current user can self-grant `live_session` consent until date of birth is backfilled. This is correct safety behavior, not a bug — but it becomes a real constraint the moment live sessions are built, and the backfill is a prerequisite for that work, not an afterthought.
+
+**4. A failed signup clears the form.** React 19 resets uncontrolled fields after a form action completes, so any error returned from `signUp` wipes every field the student typed, date of birth included. Pre-existing behavior, not introduced by the date-of-birth change — but more annoying now that there is more to retype, and worst for the audience least likely to try a third time.
 
 **Per-objective mastery is the highest-leverage item on the roadmap.** It does three jobs at once: makes lessons feel personal, makes CFI endorsements defensible, and produces the outcome reporting that renews institutional contracts.
 
@@ -220,6 +227,23 @@ Closes the guardian consent gap: the old `consent` INSERT policy let any authent
 - **`guardian_links` is client-readable only.** Every write goes through a server route using the service role. Verification is the entire security property here, and it belongs in code that can be written and reviewed carefully — not in a policy expression.
 - **Consent verification is tiered.** `email_invite` is sufficient for `school_progress` and `sponsor_milestones`. `live_session` requires `school_roster` or `staff_manual`, because clicking a link proves control of a mailbox, not guardianship — a student with a second email address satisfies it.
 - **`is_adult()` fails closed on a null `date_of_birth`.** Unknown age is treated as a minor, so self-granting `live_session` requires a date of birth on file. Erring toward "minor" is the only safe direction when the subject may be a child.
+
+---
+
+## Migrations `0008`–`0010`
+
+**`0008` — date of birth reaches `profiles`.** Replaces `handle_new_user` so it carries `date_of_birth` out of `raw_user_meta_data`. The cast is deliberately defensive: a malformed or implausible value yields null rather than raising. This trigger is `SECURITY DEFINER` on `auth.users`, so a raise would abort the entire signup transaction and the student would see a generic failure with nothing to act on. Null fails closed anyway, since `is_adult()` treats unknown age as a minor. Verified by signing up on the live site.
+
+**`0009` — per-objective mastery.** Adds `learning_objectives`, `objective_signals`, `objective_assessments`, and the `objective_mastery` view.
+
+**`0010` — objective sync.** Loads the 48 objectives from `src/lib/curriculum.ts` into `learning_objectives`. Generated, not hand-written: regenerate it from `curriculum.ts` rather than editing it, because a hand edit is how the ids in the two files drift apart. It is safe to re-run, and it refuses to run if it would retire an objective that already has mastery data.
+
+### Locked design decisions
+
+- **Two evidence streams, with a structural wall between them.** `objective_signals` is AI-inferred from conversation and drives adaptive tutoring only. `objective_assessments` is scored quiz evidence and is the only reportable stream. The `objective_mastery` view reads exclusively from assessments, so a dashboard query cannot pull in inferred mastery by mistake. The wall is structural rather than a convention someone has to remember.
+- **Mastery is computed, never stored.** The rule lives in a view so the weighting can change without a migration and without rewriting history.
+- **Neither stream has a client INSERT policy.** Both are written server-side with the service role. A student who can insert `is_correct = true` has a report that means nothing — and an unverifiable report is worse than no report, because someone will act on it.
+- **Objective ids are permanent.** Format is `lesson-slug.short-fragment`, assigned once. Rewording an objective's text is fine and expected; changing its id orphans every mastery record pointing at it. 48 objectives, 16 of them safety-critical.
 
 ---
 
