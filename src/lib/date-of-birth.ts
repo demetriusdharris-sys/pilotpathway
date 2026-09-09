@@ -15,6 +15,8 @@
 
 export const MINIMUM_AGE_YEARS = 13;
 
+export const ADULT_AGE_YEARS = 18;
+
 const DATE_OF_BIRTH_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 const IMPLAUSIBLE_DATE_OF_BIRTH =
@@ -78,6 +80,50 @@ export function dateOfBirthError(value: string): string | undefined {
   }
 
   return undefined;
+}
+
+/**
+ * Whether someone born on `value` has already reached `years` years.
+ *
+ * Integer comparison on the calendar parts, for the same reason as
+ * dateOfBirthError: `new Date("2008-03-04")` is UTC midnight, which is the
+ * previous day in California, and someone would turn 18 a day late.
+ *
+ * Fails closed. A null, malformed, or impossible date returns false, which
+ * mirrors is_adult() in 0007 treating unknown age as a minor — the only safe
+ * direction when the subject may be a child.
+ */
+export function hasReachedAge(
+  value: string | null | undefined,
+  years: number,
+): boolean {
+  if (typeof value !== "string" || !DATE_OF_BIRTH_PATTERN.test(value)) {
+    return false;
+  }
+
+  const [year, month, day] = value.split("-").map(Number);
+
+  const asDate = new Date(year, month - 1, day);
+  if (
+    asDate.getFullYear() !== year ||
+    asDate.getMonth() !== month - 1 ||
+    asDate.getDate() !== day
+  ) {
+    return false;
+  }
+
+  const today = new Date();
+  const todayYear = today.getFullYear();
+  const todayMonth = today.getMonth() + 1;
+  const todayDay = today.getDate();
+
+  const milestoneYear = year + years;
+
+  return (
+    milestoneYear < todayYear ||
+    (milestoneYear === todayYear &&
+      (month < todayMonth || (month === todayMonth && day <= todayDay)))
+  );
 }
 
 /**
