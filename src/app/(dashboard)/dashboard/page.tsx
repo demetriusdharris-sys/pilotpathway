@@ -42,7 +42,15 @@ export default async function DashboardPage() {
           >
             PilotPathway.ai
           </Link>
-          <SignOutButton />
+          <div className="flex items-center gap-4">
+            <Link
+              href="/profile"
+              className="text-muted-foreground hover:text-foreground text-sm font-medium underline-offset-4 hover:underline"
+            >
+              Profile
+            </Link>
+            <SignOutButton />
+          </div>
         </div>
       </header>
 
