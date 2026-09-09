@@ -26,6 +26,7 @@ import {
   estimateSignalCostCents,
   extractObjectiveSignals,
 } from "@/lib/objective-signals";
+import { loadLatestSignals } from "@/lib/objective-signals-read";
 import { buildMasteryNotes } from "@/lib/mastery";
 import { getProgress } from "@/lib/progress";
 
@@ -204,14 +205,25 @@ export async function POST(request: NextRequest) {
   // --- Student context ------------------------------------------------------
   //
   // Everything the tutor needs to know about who it is talking to and where
-  // they are. All four reads are independent, so they run concurrently.
+  // they are. All five reads are independent, so they run concurrently.
 
-  const [history, priorCount, progress, profileResult] = await Promise.all([
-    loadConversation(supabase, user.id, found.lesson.slug, MAX_HISTORY_MESSAGES),
-    countConversation(supabase, user.id, found.lesson.slug),
-    getProgress(user.id),
-    supabase.from("profiles").select("first_name").eq("id", user.id).maybeSingle(),
-  ]);
+  const [history, priorCount, progress, profileResult, objectiveSignals] =
+    await Promise.all([
+      loadConversation(
+        supabase,
+        user.id,
+        found.lesson.slug,
+        MAX_HISTORY_MESSAGES,
+      ),
+      countConversation(supabase, user.id, found.lesson.slug),
+      getProgress(user.id),
+      supabase
+        .from("profiles")
+        .select("first_name")
+        .eq("id", user.id)
+        .maybeSingle(),
+      loadLatestSignals(supabase, user.id, found.lesson.slug),
+    ]);
 
   const firstName = profileResult.data?.first_name ?? null;
 
@@ -220,6 +232,7 @@ export async function POST(request: NextRequest) {
     lesson: found.lesson,
     progress,
     priorMessagesInLesson: priorCount,
+    signals: objectiveSignals,
   });
 
   // Persist the question now. If the reply fails the student can see what they

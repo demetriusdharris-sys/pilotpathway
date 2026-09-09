@@ -1,4 +1,5 @@
 import type { Lesson, Stage } from "@/lib/curriculum";
+import type { LatestObjectiveSignal } from "@/lib/objective-signals-read";
 import type { ProgressBySlug } from "@/lib/progress";
 
 /**
@@ -14,6 +15,12 @@ export type MasterySignals = {
   lesson: Lesson;
   progress: ProgressBySlug;
   priorMessagesInLesson: number;
+  /**
+   * Optional. Conversation-inferred readings, newest per objective. Absent or
+   * empty means the tutor is told nothing about per-objective mastery, which
+   * is the correct behaviour before any signals exist.
+   */
+  signals?: LatestObjectiveSignal[];
 };
 
 /**
@@ -26,8 +33,21 @@ export type MasterySignals = {
  * learned -- which, on stall recognition or fuel planning, is not a harmless
  * mistake.
  */
-export function buildMasteryNotes(signals: MasterySignals): string {
-  const { stage, lesson, progress, priorMessagesInLesson } = signals;
+/** How a reading reads to the instructor, in plain language. */
+const READING_PHRASE = {
+  solid: "Solid on",
+  shaky: "Shaky on",
+  missing: "Showed a gap on",
+} as const;
+
+export function buildMasteryNotes(input: MasterySignals): string {
+  const {
+    stage,
+    lesson,
+    progress,
+    priorMessagesInLesson,
+    signals: objectiveSignals,
+  } = input;
 
   const lines: string[] = [];
 
@@ -90,6 +110,49 @@ export function buildMasteryNotes(signals: MasterySignals): string {
   lines.push(
     "Caveat: lesson status is self-reported by the student, not a demonstrated result. Treat it as where they think they are, not proof of what they know. Check understanding before assuming it.",
   );
+
+  // Per-objective readings, when any exist. Everything below is skipped
+  // entirely when there are none -- no header, no label, no empty list.
+  const byObjectiveId = new Map(
+    (objectiveSignals ?? []).map((signal) => [signal.objectiveId, signal]),
+  );
+
+  if (byObjectiveId.size > 0) {
+    // Walked in lesson order rather than signal order, so the tutor reads them
+    // in the sequence it teaches them. A signal for an objective that is not
+    // in this lesson is ignored.
+    const readObjectives = lesson.objectives.flatMap((objective) => {
+      const signal = byObjectiveId.get(objective.id);
+      return signal ? [{ objective, signal }] : [];
+    });
+
+    for (const { objective, signal } of readObjectives) {
+      lines.push(
+        `${READING_PHRASE[signal.reading]} "${objective.text}" (${signal.confidence} confidence).`,
+      );
+    }
+
+    const shakySafetyCritical = readObjectives.filter(
+      ({ objective, signal }) =>
+        objective.isSafetyCritical &&
+        (signal.reading === "shaky" || signal.reading === "missing"),
+    );
+
+    if (shakySafetyCritical.length > 0) {
+      const names = shakySafetyCritical
+        .map(({ objective }) => `"${objective.text}"`)
+        .join("; ");
+      lines.push(
+        `Not yet solid: ${names}. These are safety-critical. Weave them back into the conversation when it fits naturally — do not stop the lesson to drill them, and do not block the student from moving forward.`,
+      );
+    }
+
+    if (readObjectives.length > 0) {
+      lines.push(
+        "Caveat: these readings are one model's read of earlier conversations, not a scored result. Treat them as where to check, not as proof of what the student knows.",
+      );
+    }
+  }
 
   return lines.join(" ");
 }
