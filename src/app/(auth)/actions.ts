@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { getSupabaseEnv, SUPABASE_SETUP_MESSAGE } from "@/lib/supabase/env";
+import { safeNext } from "@/lib/safe-next";
 
 export type AuthState = {
   error?: string;
@@ -113,12 +114,6 @@ function dateOfBirthError(value: string): string | undefined {
   return undefined;
 }
 
-function safeNext(value: FormDataEntryValue | null) {
-  const next = String(value ?? "");
-  // Only allow same-origin relative paths, never a protocol-relative URL.
-  return next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
-}
-
 export async function signUp(
   _prevState: AuthState,
   formData: FormData,
@@ -154,11 +149,16 @@ export async function signUp(
     .trim()
     .slice(0, 60);
 
+  // Carried through the confirmation email so someone who signed up in order
+  // to do something specific -- confirm a guardian invite, say -- lands back
+  // on that thing instead of a dashboard with no memory of why they came.
+  const next = safeNext(formData.get("next"));
+
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      emailRedirectTo: `${origin}/auth/callback`,
+      emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
       data: {
         date_of_birth: dateOfBirth,
         ...(firstName ? { first_name: firstName } : {}),

@@ -30,7 +30,13 @@ function maxDateOfBirth(): string {
   return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
-export default function SignUpPage() {
+export default async function SignUpPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
+  const { next } = await searchParams;
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
@@ -48,6 +54,7 @@ export default function SignUpPage() {
         askFirstName
         askDateOfBirth
         maxDateOfBirth={maxDateOfBirth()}
+        next={next}
       />
 
       <p className="text-muted-foreground text-sm">

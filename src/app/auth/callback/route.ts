@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { getSupabaseEnv } from "@/lib/supabase/env";
+import { safeNext } from "@/lib/safe-next";
 
 const OTP_TYPES: readonly EmailOtpType[] = [
   "signup",
@@ -19,11 +20,9 @@ function isEmailOtpType(value: string | null): value is EmailOtpType {
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
 
-  const nextParam = searchParams.get("next") ?? "/dashboard";
-  const next =
-    nextParam.startsWith("/") && !nextParam.startsWith("//")
-      ? nextParam
-      : "/dashboard";
+  // Set by signUp on the confirmation link. Same validator the auth actions
+  // use -- this must never become a second, divergent copy.
+  const next = safeNext(searchParams.get("next"));
 
   const fail = (reason: string) =>
     NextResponse.redirect(`${origin}/login?error=${reason}`);
