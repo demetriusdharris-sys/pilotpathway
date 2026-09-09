@@ -71,6 +71,9 @@ Vercel can serve an older deployment than `master` contains. Check what is actua
 - **Supabase SQL Editor wraps a multi-statement paste in a single transaction.** A failure partway through rolls the whole paste back, so there is no partial state to clean up — but also no partial progress. Fix the statement that failed and re-run the entire migration.
 - **`0010` is written for the Supabase SQL Editor specifically.** Because the editor supplies the transaction, an explicit `begin;`/`commit;` inside the file conflicts with that wrapper and caused the temp table to drop early. The file therefore opens no transaction of its own and drops its temp table explicitly. Run through `psql` it would not be atomic: each statement would autocommit, so the refusal check would fire after the writes had already landed.
 - **The founder runs git commands in a separate PowerShell window**, at the direction of a chat session. `origin/master` moving forward without Claude Code having pushed is expected and normal. This has been misdiagnosed as an automatic push three times — check this note before reporting it as an anomaly again.
+- **A commit message is not a record of apply state.** Migration commits say "(not yet applied)" because that was true when the file was written; they are never amended once the migration is applied. **As of Sep 9 2026, every migration `0001` through `0013` is applied to production and verified.** Do not infer from a commit message that a migration is pending — ask, or check the database.
+- **Secrets are not visible from the repo, and their absence there means nothing.** `.env.local` is gitignored and Vercel environment variables live in Vercel, not on disk. `RESEND_API_KEY`, `ANTHROPIC_API_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` are all set in both. Do not conclude a key is missing because grep did not find it.
+- **`pnpm lint` and `pnpm exec tsc --noEmit` do not catch Next's Server Action export rules.** A `"use server"` module may only export async functions; exporting a sync helper from one passes both checks and then fails `pnpm build`. Run the build whenever you touch a `"use server"` file.
 
 ---
 
@@ -124,12 +127,15 @@ Explicitly out of scope for that sprint: VR, live flight-school booking, full me
 
 ---
 
-## Current state (as of Sep 4, 2026)
+## Current state (as of Sep 9, 2026)
 
 **Working in production:**
 - Signup / login with email confirmation enforced
 - Signup collects date of birth behind a 13+ age gate, validated server-side in the Server Action before Supabase is called. Verified on the live site.
 - `date_of_birth` carried through signup metadata into `profiles`. Verified on the live site.
+- Student profile page at `/profile`: first name, and a write-once date of birth for accounts that never had one. Verified on the live site.
+- Guardian invite flow, end to end — invite route issuing hashed single-use tokens, Resend email, redemption page, and guardian status on the profile page. Verified on the live site.
+- `next` preserved through email confirmation, so a guardian who signs up to accept an invite returns to that invite instead of a bare dashboard. Verified on the live site.
 - Curriculum: 16 Stage 1 lessons (Stages 2 and 3 are outline labels only)
 - Captain Path tutor chat with conversation memory persisted to `instructor_messages`
 - `studentFirstName` and `masteryNotes` wired to real values (previously dead parameters)
@@ -142,7 +148,8 @@ Explicitly out of scope for that sprint: VR, live flight-school booking, full me
 **Known open bugs:**
 - PKCE same-browser requirement breaks confirmation links opened on a different device. Mobile-first audience will hit this constantly. Needs either a clearer error or a flow that works cross-device.
 - `http://localhost:3100/auth/callback` still in the production redirect allow-list.
-- `guardian_links` and both mastery streams exist in the database with no product surface. Nothing in the app writes to any of them.
+- `objective_assessments` has no product surface. Nothing writes scored evidence yet, so `objective_mastery` — the only reportable stream — is empty for every student. (`objective_signals` is now written by the tutor route and read back into the tutor's context.)
+- Losing the `0013` race returns a 500 `write_failed` rather than a message saying an invite was just created. No duplicate is made — the index does its job — but the error is unhelpful to whoever hit it.
 
 ---
 
@@ -244,6 +251,21 @@ Closes the guardian consent gap: the old `consent` INSERT policy let any authent
 - **Mastery is computed, never stored.** The rule lives in a view so the weighting can change without a migration and without rewriting history.
 - **Neither stream has a client INSERT policy.** Both are written server-side with the service role. A student who can insert `is_correct = true` has a report that means nothing — and an unverifiable report is worse than no report, because someone will act on it.
 - **Objective ids are permanent.** Format is `lesson-slug.short-fragment`, assigned once. Rewording an objective's text is fine and expected; changing its id orphans every mastery record pointing at it. 48 objectives, 16 of them safety-critical.
+
+---
+
+## Migrations `0012`–`0013`
+
+**`0012` — guardian invite tokens.** Adds `token_hash`, `token_expires_at`, and `token_redeemed_at` to `guardian_links`. Tokens are stored as SHA-256, never raw: `guardian_links` is client-readable under `0007`'s SELECT policy, so a raw token in that table would be handed straight to the student it is meant to constrain. Entropy is 32 random bytes, which is what makes the stored hash safe to expose.
+
+**`0013` — invite race guard.** Adds a partial unique index on `(student_user_id, lower(invited_email)) where status <> 'revoked'`. The invite route reads, then inserts or updates; two concurrent requests could both find nothing and both insert, leaving two live tokens for the same guardian. Revoked rows are excluded so a revoked link can be re-invited later without colliding with its own history.
+
+### Locked design decisions
+
+- **Date of birth is write-once.** The server re-reads the stored value before deciding whether to write, so a stale form or a hand-made POST cannot overwrite one already set. An editable date of birth would let a minor age themselves out of the guardian protections built for them.
+- **The guardian invite email does not name the student.** Sending a minor's name to an address that has not yet been verified as their guardian is a disclosure the flow cannot justify. The cost is a parent who may not immediately know which child it is about.
+- **Guardian invite tokens are single-use and expire in 14 days.** Redemption re-checks both at write time, not only at render, and the update is conditional on `token_redeemed_at is null` so the TOCTOU window between check and write is closed.
+- **The invite route lowercases `invited_email` before every read and write.** This is load-bearing, not tidiness: `0013`'s index is on `lower(invited_email)`, so removing the lowercase would turn a found-existing-row into a constraint violation.
 
 ---
 
