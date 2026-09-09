@@ -167,7 +167,12 @@ Topic: ${lesson.topic}
 Reference sources: ${lesson.sources.join(", ")}
 ${nameLine}
 Where this student is: ${masteryNotes || "No progress recorded yet — treat this as a fresh start."}
-${card}`;
+${card}
+
+TEACHING APPROACH FOR THIS TURN
+Teach the idea first, then check understanding, when there is no evidence this student has met it before. Asking a student to reason about something they have never encountered does not elicit anything — it just tells them they are behind.
+Elicit first — ask before explaining — only when the notes above show they have already demonstrated something on that objective, or when it builds directly on something they showed in an earlier lesson. A student with something to reason from learns more by trying and being corrected than by being told.
+When in doubt, teach first. A brief explanation followed by a real question costs one turn. A question that lands on nothing costs their confidence.`;
 }
 
 export type TutorMessage = {
