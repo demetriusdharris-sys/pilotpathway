@@ -5,8 +5,10 @@ import { getSupabaseEnv } from "@/lib/supabase/env";
 import { getLesson } from "@/lib/curriculum";
 import { getProgress } from "@/lib/progress";
 import { loadConversation } from "@/lib/instructor-messages";
+import { loadApprovedCards } from "@/lib/quiz-cards";
 import { MAX_HISTORY_MESSAGES } from "@/lib/tutor";
 import { LessonStatusControls } from "@/components/lesson-status-controls";
+import { QuizCards } from "@/components/quiz-cards";
 import { TutorChat } from "@/components/tutor-chat";
 
 type LessonPageProps = {
@@ -49,13 +51,12 @@ export default async function LessonPage({ params }: LessonPageProps) {
   const progress = await getProgress(user.id);
   const status = progress.get(lesson.slug) ?? "not_started";
 
-  // Prior conversation, so a refresh no longer destroys the thread.
-  const history = await loadConversation(
-    supabase,
-    user.id,
-    lesson.slug,
-    MAX_HISTORY_MESSAGES,
-  );
+  // Prior conversation, so a refresh no longer destroys the thread. Approved
+  // cards load alongside it -- both are independent reads.
+  const [history, cards] = await Promise.all([
+    loadConversation(supabase, user.id, lesson.slug, MAX_HISTORY_MESSAGES),
+    loadApprovedCards(supabase, lesson.slug),
+  ]);
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-12">
@@ -108,6 +109,9 @@ export default async function LessonPage({ params }: LessonPageProps) {
           and handbook content change.
         </p>
       </section>
+
+      {/* Renders nothing until a CFI has approved cards for this lesson. */}
+      <QuizCards cards={cards} />
 
       <LessonStatusControls lessonSlug={lesson.slug} status={status} />
 
