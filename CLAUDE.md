@@ -64,7 +64,8 @@ Vercel can serve an older deployment than `master` contains. Check what is actua
 ## Environment gotchas
 
 - **Working directory:** `C:\Users\demet\pilotpathway`. Do not nest another folder inside it.
-- **PKCE requires the same browser.** Auth confirmation links contain a `pkce_` token tied to browser storage from the signup session. Opening the link in a different browser fails with "link did not work." This is a known open product bug (see below).
+- **Signup confirmation no longer uses PKCE, and must not go back to it.** `{{ .ConfirmationURL }}` produces a PKCE link whose `code_verifier` lives in the browser that started the signup, so opening it on another device fails with "link did not work" — fatal for a mobile-first audience. The Confirm signup template now uses `{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=email`, which carries the token in the URL and needs nothing stored locally. Verified Sep 15 2026 by signing up on a phone and confirming on a desktop. Both templates are recorded in `docs/auth-email-templates.md`; Supabase is the only other copy. PKCE still applies to any template left on `{{ .ConfirmationURL }}` — a password reset flow, if one is ever added, needs the same treatment.
+- **`signUp` appends `?next=` to `emailRedirectTo` unconditionally, and that is load-bearing.** It guarantees `{{ .RedirectTo }}` already carries a query string, so the email template can append `&token_hash=...` and produce a valid URL. Make that append conditional and every confirmation link becomes `https://.../auth/callback&token_hash=...` — malformed, and nobody can confirm an account. Change the template in the same breath or not at all.
 - **Email:** Resend SMTP, sending from `noreply@pilotpathway.ai`. Domain verified in Resend with DKIM + SPF + MX records in GoDaddy. Supabase Site URL must be `https://pilotpathway.vercel.app` (no trailing slash) or confirmation links break.
 - **GoDaddy DNS:** the Name field must exclude the domain. `resend._domainkey`, not `resend._domainkey.pilotpathway.ai`.
 - **Middleware:** must not run on non-GET requests. `NextResponse.next({ request })` clones the request body and hangs on Server Action POSTs, causing `MIDDLEWARE_INVOCATION_TIMEOUT`. Login and signup are the only Server Actions in the app.
@@ -132,6 +133,7 @@ Explicitly out of scope for that sprint: VR, live flight-school booking, full me
 
 **Working in production:**
 - Signup / login with email confirmation enforced
+- Email confirmation works across devices — sign up on a phone, confirm on a desktop. Verified on the live site Sep 15 2026.
 - Signup collects date of birth behind a 13+ age gate, validated server-side in the Server Action before Supabase is called. Verified on the live site.
 - `date_of_birth` carried through signup metadata into `profiles`. Verified on the live site.
 - Student profile page at `/profile`: first name, and a write-once date of birth for accounts that never had one. Verified on the live site.
@@ -148,7 +150,6 @@ Explicitly out of scope for that sprint: VR, live flight-school booking, full me
 **Measured cost:** ~0.48¢ per follow-up exchange with prompt caching (down from ~1.05–1.29¢ before conversation memory was added — caching the 2,700-token system prompt saves more than history costs).
 
 **Known open bugs:**
-- PKCE same-browser requirement breaks confirmation links opened on a different device. Mobile-first audience will hit this constantly. Needs either a clearer error or a flow that works cross-device.
 - `http://localhost:3100/auth/callback` still in the production redirect allow-list.
 - **No quiz card is approved, so no student sees a quiz and `objective_mastery` — the only reportable stream — is still empty.** The machinery is built and verified; the blocker is a CFI reviewing the 18 drafted cards in `docs/cards/`. That is a person, not engineering, and it is the single biggest thing between this product and outcome data for a school.
 - Losing the `0013` race returns a 500 `write_failed` rather than a message saying an invite was just created. No duplicate is made — the index does its job — but the error is unhelpful to whoever hit it.
