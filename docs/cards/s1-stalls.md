@@ -21,6 +21,17 @@ Two things you will see in the text, deliberately:
 
 No section numbers, ACS task codes, or figure numbers appear anywhere. Sources are named only — a student who shows a DPE a stale code pays for our mistake.
 
+## About the A–D letters
+
+**The options are shuffled every time a card is shown to a student.** The letters here are display only — they exist so we can talk about the options in this document, and no student will ever see them in this order. Each option therefore also carries a stable id, `opt-1` to `opt-4`, and **Correct answer** names that id rather than a letter.
+
+Two things follow from this, and they matter when you write or fix an option:
+
+- **Never write an option that refers to another one by letter.** "Both A and B," "same as C but with flaps," "A or D" — all of these become nonsense once the order changes. If two options need to relate to each other, say it in words that survive being moved.
+- **No "all of the above" or "none of the above."** Those depend on there being an above. They are also weak questions in their own right: a student who spots one true option can often reason their way to "all of the above" without knowing the rest.
+
+If you need to reference an option in your review notes, use its id — `opt-3` means the same thing tomorrow, after a reshuffle, and in the database.
+
 There is a blank **CFI review** line at the end of every card.
 
 ---
@@ -37,12 +48,12 @@ There is a blank **CFI review** line at the end of every card.
 
 **Options:**
 
-- **A.** The airplane slows below a fixed speed printed in the handbook
-- **B.** The wing passes its critical angle of attack
-- **C.** The engine loses power
-- **D.** The nose is pointed too far above the horizon
+- **A.** (`opt-1`) The airplane slows below a fixed speed printed in the handbook
+- **B.** (`opt-2`) The wing passes its critical angle of attack
+- **C.** (`opt-3`) The engine loses power
+- **D.** (`opt-4`) The nose is pointed too far above the horizon
 
-**Correct answer:** B
+**Correct answer:** `opt-2`
 
 **Explanation:** A stall is about the angle between the wing and the air coming at it — the **angle of attack** — not about speed. Past a certain angle, called the **critical angle of attack**, the air stops following the top of the wing and lift falls off. Confirm in the Pilot's Handbook of Aeronautical Knowledge and the Airplane Flying Handbook.
 
@@ -58,12 +69,12 @@ There is a blank **CFI review** line at the end of every card.
 
 **Options:**
 
-- **A.** No — a stall only happens near the published stall speed
-- **B.** No — a stall only happens with the nose high
-- **C.** Yes — if the wing reaches its critical angle of attack, it stalls whatever the airspeed says
-- **D.** Yes — but only with the engine at idle
+- **A.** (`opt-1`) No — a stall only happens near the published stall speed
+- **B.** (`opt-2`) No — a stall only happens with the nose high
+- **C.** (`opt-3`) Yes — if the wing reaches its critical angle of attack, it stalls whatever the airspeed says
+- **D.** (`opt-4`) Yes — but only with the engine at idle
 
-**Correct answer:** C
+**Correct answer:** `opt-3`
 
 **Explanation:** Pulling back harder raises the angle of attack, and the wing does not care how fast it is going when it gets there. This is an **accelerated stall**. The speed at which it happens climbs as you pull harder — in a steep turn, by roughly `[CFI: confirm value]`. Confirm in the Pilot's Handbook of Aeronautical Knowledge and the Airplane Flying Handbook.
 
@@ -79,12 +90,12 @@ There is a blank **CFI review** line at the end of every card.
 
 **Options:**
 
-- **A.** No — a nose-low attitude always means the wing is flying
-- **B.** Yes — if the pilot pulls hard enough to pass the critical angle of attack
-- **C.** No — the airflow keeps the wing unstalled in a descent
-- **D.** Yes — but only with the flaps down
+- **A.** (`opt-1`) No — a nose-low attitude always means the wing is flying
+- **B.** (`opt-2`) Yes — if the pilot pulls hard enough to pass the critical angle of attack
+- **C.** (`opt-3`) No — the airflow keeps the wing unstalled in a descent
+- **D.** (`opt-4`) Yes — but only with the flaps down
 
-**Correct answer:** B
+**Correct answer:** `opt-2`
 
 **Explanation:** Attitude is where the nose is pointing; angle of attack is how the wing meets the air. They are not the same thing, and a hard pull during a descent or a dive recovery can stall the wing with the nose well below the horizon. Confirm in the Pilot's Handbook of Aeronautical Knowledge and the Airplane Flying Handbook.
 
@@ -106,12 +117,12 @@ There is a blank **CFI review** line at the end of every card.
 
 **Options:**
 
-- **A.** The airspeed suddenly increases
-- **B.** The controls feel mushy and answer more slowly
-- **C.** The engine begins running rough
-- **D.** The controls become stiffer and heavier
+- **A.** (`opt-1`) The airspeed suddenly increases
+- **B.** (`opt-2`) The controls feel mushy and answer more slowly
+- **C.** (`opt-3`) The engine begins running rough
+- **D.** (`opt-4`) The controls become stiffer and heavier
 
-**Correct answer:** B
+**Correct answer:** `opt-2`
 
 **Explanation:** With less airflow over the control surfaces, the controls go soft and sloppy before the wing quits — often along with a shudder through the airframe, called **buffet**. Option C is a different thing entirely: an engine problem is not an aerodynamic stall. Confirm in the Pilot's Handbook of Aeronautical Knowledge and the Airplane Flying Handbook.
 
@@ -127,12 +138,12 @@ There is a blank **CFI review** line at the end of every card.
 
 **Options:**
 
-- **A.** The wing is already stalled
-- **B.** You are approaching the critical angle of attack, with some margin left before the stall
-- **C.** Your airspeed has dropped below the white arc
-- **D.** The airplane has entered a spin
+- **A.** (`opt-1`) The wing is already stalled
+- **B.** (`opt-2`) You are approaching the critical angle of attack, with some margin left before the stall
+- **C.** (`opt-3`) Your airspeed has dropped below the white arc
+- **D.** (`opt-4`) The airplane has entered a spin
 
-**Correct answer:** B
+**Correct answer:** `opt-2`
 
 **Explanation:** The stall warning is an early warning, not a report of something that already happened — it triggers before the wing stalls, giving you room to act. How much room varies by aircraft: `[CFI: confirm value]`. Confirm in the Pilot's Handbook of Aeronautical Knowledge, and in the POH or AFM for the specific airplane.
 
@@ -148,12 +159,12 @@ There is a blank **CFI review** line at the end of every card.
 
 **Options:**
 
-- **A.** Yes — above the stall range on the dial, you are safe
-- **B.** No — the wing stalls at an angle, and the speed that happens at changes with how hard you are maneuvering
-- **C.** Yes — provided the flaps are up
-- **D.** No — because the airspeed indicator is usually inaccurate
+- **A.** (`opt-1`) Yes — above the stall range on the dial, you are safe
+- **B.** (`opt-2`) No — the wing stalls at an angle, and the speed that happens at changes with how hard you are maneuvering
+- **C.** (`opt-3`) Yes — provided the flaps are up
+- **D.** (`opt-4`) No — because the airspeed indicator is usually inaccurate
 
-**Correct answer:** B
+**Correct answer:** `opt-2`
 
 **Explanation:** The marked stall range on the dial assumes a particular set of conditions. Load the wing up in a turn or a pull-up and the wing can stall at a higher indicated speed. The instrument is not lying to you — it is answering a different question than the one that matters. Confirm in the Pilot's Handbook of Aeronautical Knowledge.
 
@@ -177,12 +188,12 @@ There is a blank **CFI review** line at the end of every card.
 
 **Options:**
 
-- **A.** Add full power
-- **B.** Reduce the angle of attack — release the back pressure and lower the nose
-- **C.** Level the wings with aileron
-- **D.** Pull back to stop the airplane descending
+- **A.** (`opt-1`) Add full power
+- **B.** (`opt-2`) Reduce the angle of attack — release the back pressure and lower the nose
+- **C.** (`opt-3`) Level the wings with aileron
+- **D.** (`opt-4`) Pull back to stop the airplane descending
 
-**Correct answer:** B
+**Correct answer:** `opt-2`
 
 **Explanation:** Only reducing the angle of attack makes the wing fly again — everything else comes after. Option D is the instinct that gets people hurt: pulling harder is exactly what deepens a stall. Power and wings-level follow, in the order your airplane's procedure gives. Confirm in the Airplane Flying Handbook, and follow the POH or AFM for your airplane.
 
@@ -198,12 +209,12 @@ There is a blank **CFI review** line at the end of every card.
 
 **Options:**
 
-- **A.** A steep bank angle
-- **B.** Yaw while the wing is stalled
-- **C.** Full flaps
-- **D.** An engine failure
+- **A.** (`opt-1`) A steep bank angle
+- **B.** (`opt-2`) Yaw while the wing is stalled
+- **C.** (`opt-3`) Full flaps
+- **D.** (`opt-4`) An engine failure
 
-**Correct answer:** B
+**Correct answer:** `opt-2`
 
 **Explanation:** A spin needs two ingredients at once: a stalled wing, and yaw. One wing is more stalled than the other, and the airplane rolls and rotates — this is why coordinated flight matters so much near the stall. Bank angle alone does not cause it. Confirm in the Pilot's Handbook of Aeronautical Knowledge and the Airplane Flying Handbook.
 
@@ -219,12 +230,12 @@ There is a blank **CFI review** line at the end of every card.
 
 **Options:**
 
-- **A.** The air is denser near the ground, so the spin turns faster
-- **B.** Recovery costs altitude, and close to the ground there may not be enough left
-- **C.** A spin cannot be recovered from at all
-- **D.** The engine is more likely to stop in a spin
+- **A.** (`opt-1`) The air is denser near the ground, so the spin turns faster
+- **B.** (`opt-2`) Recovery costs altitude, and close to the ground there may not be enough left
+- **C.** (`opt-3`) A spin cannot be recovered from at all
+- **D.** (`opt-4`) The engine is more likely to stop in a spin
 
-**Correct answer:** B
+**Correct answer:** `opt-2`
 
 **Explanation:** Recovering costs height, and how much depends on the airplane and on how far the spin has developed: `[CFI: confirm value]`. That is the whole reason the traffic pattern is where stall and spin awareness matters most. Confirm in the Airplane Flying Handbook, and in the POH or AFM for the specific airplane.
 
