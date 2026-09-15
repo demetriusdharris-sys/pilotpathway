@@ -75,5 +75,4 @@ Cards covering safety-critical objectives — see `isSafetyCritical` in `src/lib
 
 *Accurate as of Sep 15 2026. Remove entries as they are resolved.*
 
-- **`s1-stalls.md` violates rule 1 in two explanations.** Card 4 says "Option C is a different thing entirely" and Card 7 says "Option D is the instinct that gets people hurt." Both break under shuffling. Pending a decision on the wording, since the explanations are under CFI review.
-- **`s1-stalls.md` violates rule 6.** Eight of its nine correct answers sit in the second position. Fixing it means reordering options, which has been deliberately deferred until the CFI review comes back, so that the reviewer sees the draft that was actually written.
+- **`s1-stalls.md`: the distractor-quality question behind the clustering is still open.** Its correct answers now sit across all four positions, so the document reads honestly and a reviewer's eye has nothing to anticipate. That fixed the reviewability, which is all rule 6 can fix. It did not establish that every distractor was written as a serious alternative rather than as filler arranged around an answer chosen first — reordering cannot tell you that, and neither can the author. Deciding it is what the CFI review is for. Until that review comes back, treat the distractors on those nine cards as unverified.

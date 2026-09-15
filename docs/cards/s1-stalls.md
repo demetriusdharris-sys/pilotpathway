@@ -48,8 +48,8 @@ There is a blank **CFI review** line at the end of every card.
 
 **Options:**
 
-- **A.** (`opt-1`) The airplane slows below a fixed speed printed in the handbook
-- **B.** (`opt-2`) The wing passes its critical angle of attack
+- **A.** (`opt-2`) The wing passes its critical angle of attack
+- **B.** (`opt-1`) The airplane slows below a fixed speed printed in the handbook
 - **C.** (`opt-3`) The engine loses power
 - **D.** (`opt-4`) The nose is pointed too far above the horizon
 
@@ -91,9 +91,9 @@ There is a blank **CFI review** line at the end of every card.
 **Options:**
 
 - **A.** (`opt-1`) No — a nose-low attitude always means the wing is flying
-- **B.** (`opt-2`) Yes — if the pilot pulls hard enough to pass the critical angle of attack
-- **C.** (`opt-3`) No — the airflow keeps the wing unstalled in a descent
-- **D.** (`opt-4`) Yes — but only with the flaps down
+- **B.** (`opt-3`) No — the airflow keeps the wing unstalled in a descent
+- **C.** (`opt-4`) Yes — but only with the flaps down
+- **D.** (`opt-2`) Yes — if the pilot pulls hard enough to pass the critical angle of attack
 
 **Correct answer:** `opt-2`
 
@@ -124,7 +124,7 @@ There is a blank **CFI review** line at the end of every card.
 
 **Correct answer:** `opt-2`
 
-**Explanation:** With less airflow over the control surfaces, the controls go soft and sloppy before the wing quits — often along with a shudder through the airframe, called **buffet**. Option C is a different thing entirely: an engine problem is not an aerodynamic stall. Confirm in the Pilot's Handbook of Aeronautical Knowledge and the Airplane Flying Handbook.
+**Explanation:** With less airflow over the control surfaces, the controls go soft and sloppy before the wing quits — often along with a shudder through the airframe, called **buffet**. The engine-roughness option is a different thing entirely: an engine problem is not an aerodynamic stall. Confirm in the Pilot's Handbook of Aeronautical Knowledge and the Airplane Flying Handbook.
 
 **Visual:** A short looping animation of a control yoke being moved side to side, with the airplane's response drawn as a lagging, sluggish wing dip. Beside it, a simple "feel" meter sliding from "crisp" toward "mushy." Faint vibration lines around the airframe to suggest buffet. No numbers on screen.
 
@@ -139,8 +139,8 @@ There is a blank **CFI review** line at the end of every card.
 **Options:**
 
 - **A.** (`opt-1`) The wing is already stalled
-- **B.** (`opt-2`) You are approaching the critical angle of attack, with some margin left before the stall
-- **C.** (`opt-3`) Your airspeed has dropped below the white arc
+- **B.** (`opt-3`) Your airspeed has dropped below the white arc
+- **C.** (`opt-2`) You are approaching the critical angle of attack, with some margin left before the stall
 - **D.** (`opt-4`) The airplane has entered a spin
 
 **Correct answer:** `opt-2`
@@ -159,8 +159,8 @@ There is a blank **CFI review** line at the end of every card.
 
 **Options:**
 
-- **A.** (`opt-1`) Yes — above the stall range on the dial, you are safe
-- **B.** (`opt-2`) No — the wing stalls at an angle, and the speed that happens at changes with how hard you are maneuvering
+- **A.** (`opt-2`) No — the wing stalls at an angle, and the speed that happens at changes with how hard you are maneuvering
+- **B.** (`opt-1`) Yes — above the stall range on the dial, you are safe
 - **C.** (`opt-3`) Yes — provided the flaps are up
 - **D.** (`opt-4`) No — because the airspeed indicator is usually inaccurate
 
@@ -189,13 +189,13 @@ There is a blank **CFI review** line at the end of every card.
 **Options:**
 
 - **A.** (`opt-1`) Add full power
-- **B.** (`opt-2`) Reduce the angle of attack — release the back pressure and lower the nose
-- **C.** (`opt-3`) Level the wings with aileron
-- **D.** (`opt-4`) Pull back to stop the airplane descending
+- **B.** (`opt-3`) Level the wings with aileron
+- **C.** (`opt-4`) Pull back to stop the airplane descending
+- **D.** (`opt-2`) Reduce the angle of attack — release the back pressure and lower the nose
 
 **Correct answer:** `opt-2`
 
-**Explanation:** Only reducing the angle of attack makes the wing fly again — everything else comes after. Option D is the instinct that gets people hurt: pulling harder is exactly what deepens a stall. Power and wings-level follow, in the order your airplane's procedure gives. Confirm in the Airplane Flying Handbook, and follow the POH or AFM for your airplane.
+**Explanation:** Only reducing the angle of attack makes the wing fly again — everything else comes after. The pull-back-to-stop-the-descent option is the instinct that gets people hurt: pulling harder is exactly what deepens a stall. Power and wings-level follow, in the order your airplane's procedure gives. Confirm in the Airplane Flying Handbook, and follow the POH or AFM for your airplane.
 
 **Visual:** Three panels. First, the wing past its critical angle with separated airflow and a downward arrow. Second, the control column moving forward and the angle of attack visibly shrinking, airflow reattaching. Third, the airplane flying again with the nose coming back up. A caption under panel two: "This is the step that ends the stall."
 
@@ -231,8 +231,8 @@ There is a blank **CFI review** line at the end of every card.
 **Options:**
 
 - **A.** (`opt-1`) The air is denser near the ground, so the spin turns faster
-- **B.** (`opt-2`) Recovery costs altitude, and close to the ground there may not be enough left
-- **C.** (`opt-3`) A spin cannot be recovered from at all
+- **B.** (`opt-3`) A spin cannot be recovered from at all
+- **C.** (`opt-2`) Recovery costs altitude, and close to the ground there may not be enough left
 - **D.** (`opt-4`) The engine is more likely to stop in a spin
 
 **Correct answer:** `opt-2`
