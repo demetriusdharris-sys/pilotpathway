@@ -71,9 +71,10 @@ Vercel can serve an older deployment than `master` contains. Check what is actua
 - **Supabase SQL Editor wraps a multi-statement paste in a single transaction.** A failure partway through rolls the whole paste back, so there is no partial state to clean up — but also no partial progress. Fix the statement that failed and re-run the entire migration.
 - **`0010` is written for the Supabase SQL Editor specifically.** Because the editor supplies the transaction, an explicit `begin;`/`commit;` inside the file conflicts with that wrapper and caused the temp table to drop early. The file therefore opens no transaction of its own and drops its temp table explicitly. Run through `psql` it would not be atomic: each statement would autocommit, so the refusal check would fire after the writes had already landed.
 - **The founder runs git commands in a separate PowerShell window**, at the direction of a chat session. `origin/master` moving forward without Claude Code having pushed is expected and normal. This has been misdiagnosed as an automatic push three times — check this note before reporting it as an anomaly again.
-- **A commit message is not a record of apply state.** Migration commits say "(not yet applied)" because that was true when the file was written; they are never amended once the migration is applied. **As of Sep 9 2026, every migration `0001` through `0013` is applied to production and verified.** Do not infer from a commit message that a migration is pending — ask, or check the database.
+- **A commit message is not a record of apply state.** Migration commits say "(not yet applied)" because that was true when the file was written; they are never amended once the migration is applied. **As of Sep 15 2026, every migration `0001` through `0016` is applied to production and verified.** Do not infer from a commit message that a migration is pending — ask, or check the database.
 - **Secrets are not visible from the repo, and their absence there means nothing.** `.env.local` is gitignored and Vercel environment variables live in Vercel, not on disk. `RESEND_API_KEY`, `ANTHROPIC_API_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` are all set in both. Do not conclude a key is missing because grep did not find it.
 - **`pnpm lint` and `pnpm exec tsc --noEmit` do not catch Next's Server Action export rules.** A `"use server"` module may only export async functions; exporting a sync helper from one passes both checks and then fails `pnpm build`. Run the build whenever you touch a `"use server"` file.
+- **Column-level grants and RLS policies interact, and nothing but the live database will tell you.** When a table hides columns with `GRANT SELECT (...)`, every column an RLS policy reads must also be granted to the role running the query — above all when a policy on one table checks another table in a subquery. `0014` granted `quiz_cards` without `status`; the `quiz_card_options` policy checks `status` in a subquery, so every student read of the options failed with `42501` and the quiz silently rendered nothing. Lint, typecheck, and the build all passed. **The Postgres hint on that error suggests `GRANT SELECT ON <table>` — never follow it on a table that uses column grants to hide data.** It grants every column, including the ones being hidden. Grant the single column the policy needs, as `0016` did.
 
 ---
 
@@ -127,7 +128,7 @@ Explicitly out of scope for that sprint: VR, live flight-school booking, full me
 
 ---
 
-## Current state (as of Sep 9, 2026)
+## Current state (as of Sep 15, 2026)
 
 **Working in production:**
 - Signup / login with email confirmation enforced
@@ -136,6 +137,7 @@ Explicitly out of scope for that sprint: VR, live flight-school booking, full me
 - Student profile page at `/profile`: first name, and a write-once date of birth for accounts that never had one. Verified on the live site.
 - Guardian invite flow, end to end — invite route issuing hashed single-use tokens, Resend email, redemption page, and guardian status on the profile page. Verified on the live site.
 - `next` preserved through email confirmation, so a guardian who signs up to accept an invite returns to that invite instead of a bare dashboard. Verified on the live site.
+- Quiz cards on the lesson page, graded server-side, each answer written to `objective_assessments`. Confirmed by the founder on the live site Sep 15 2026 using one temporarily approved card, since reverted to draft. Students see no quiz until a CFI approves cards — see Known open bugs.
 - Curriculum: 16 Stage 1 lessons (Stages 2 and 3 are outline labels only)
 - Captain Path tutor chat with conversation memory persisted to `instructor_messages`
 - `studentFirstName` and `masteryNotes` wired to real values (previously dead parameters)
@@ -148,7 +150,7 @@ Explicitly out of scope for that sprint: VR, live flight-school booking, full me
 **Known open bugs:**
 - PKCE same-browser requirement breaks confirmation links opened on a different device. Mobile-first audience will hit this constantly. Needs either a clearer error or a flow that works cross-device.
 - `http://localhost:3100/auth/callback` still in the production redirect allow-list.
-- `objective_assessments` has no product surface. Nothing writes scored evidence yet, so `objective_mastery` — the only reportable stream — is empty for every student. (`objective_signals` is now written by the tutor route and read back into the tutor's context.)
+- **No quiz card is approved, so no student sees a quiz and `objective_mastery` — the only reportable stream — is still empty.** The machinery is built and verified; the blocker is a CFI reviewing the 18 drafted cards in `docs/cards/`. That is a person, not engineering, and it is the single biggest thing between this product and outcome data for a school.
 - Losing the `0013` race returns a 500 `write_failed` rather than a message saying an invite was just created. No duplicate is made — the index does its job — but the error is unhelpful to whoever hit it.
 
 ---
@@ -266,6 +268,26 @@ Closes the guardian consent gap: the old `consent` INSERT policy let any authent
 - **The guardian invite email does not name the student.** Sending a minor's name to an address that has not yet been verified as their guardian is a disclosure the flow cannot justify. The cost is a parent who may not immediately know which child it is about.
 - **Guardian invite tokens are single-use and expire in 14 days.** Redemption re-checks both at write time, not only at render, and the update is conditional on `token_redeemed_at is null` so the TOCTOU window between check and write is closed.
 - **The invite route lowercases `invited_email` before every read and write.** This is load-bearing, not tidiness: `0013`'s index is on `lower(invited_email)`, so removing the lowercase would turn a found-existing-row into a constraint violation.
+
+---
+
+## Migrations `0014`–`0016` — quiz cards
+
+**`0014` — card storage.** `quiz_cards` and `quiz_card_options`. Cards live in the database, not in code — lesson content being hardcoded is architectural debt #1, and cards are the content a CFI corrects most. A check constraint makes `approved` impossible without a `reviewed_by` and `reviewed_at`. Exactly one correct option per card, enforced by a partial unique index.
+
+**`0015` — card sync.** Generated from the reviewed markdown in `docs/cards/` by `node scripts/import-cards.mjs`. Regenerate it; never hand-edit it. Plain Node, no dependencies, so it adds nothing to the locked stack.
+
+**`0016` — the `status` grant.** Fixes the policy/grant interaction described in Environment gotchas. Found by testing on the live site.
+
+### Locked design decisions
+
+- **Answers never reach the browser.** Students are granted only the columns they may see. `quiz_card_options.is_correct` and `quiz_cards.explanation` are ungranted; asking for them as a student returns `42501`. Grading happens in a Server Action using the service role, which is the only code that reads the answer. If the correct option ever reached the client, `objective_assessments` would stop meaning anything.
+- **Nothing automated approves a card.** Every import lands as `draft`. Approval is a CFI's name and the date written against the row — a human act.
+- **An approval covers the words that were reviewed, not the id.** The sync knocks a card back to `draft` and clears its reviewer whenever its question, options, explanation, or visual changes.
+- **Cards removed from the markdown are retired, not deleted.**
+- **Options are shuffled on the server, once per render.** The order is passed to the client as data. Shuffling inside a client component would produce different orders on the server and client passes — a hydration mismatch.
+- **Grading re-checks that the card is still approved.** A card withdrawn between page load and answer is not scored.
+- **Card authoring follows `docs/cards/AUTHORING-RULES.md`.** Eight rules, including: options are shuffled so nothing refers to another by letter; no numbers unless settled across all trainers; sources named, never numbered; never frame a student's doubt about belonging as a defect.
 
 ---
 
