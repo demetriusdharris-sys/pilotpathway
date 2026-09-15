@@ -30,6 +30,8 @@ Two things follow from this, and they matter when you write or fix an option:
 - **Never write an option that refers to another one by letter.** "Both A and B," "same as C but with flaps," "A or D" — all of these become nonsense once the order changes. If two options need to relate to each other, say it in words that survive being moved.
 - **No "all of the above" or "none of the above."** Those depend on there being an above. They are also weak questions in their own right: a student who spots one true option can often reason their way to "all of the above" without knowing the rest.
 
+The ids do not run in alphabetical order down a card. An option keeps its own id when the options are reordered, so seeing **A.** (`opt-2`) is expected, not a typo.
+
 If you need to reference an option in your review notes, use its id — `opt-3` means the same thing tomorrow, after a reshuffle, and in the database.
 
 There is a blank **CFI review** line at the end of every card.
