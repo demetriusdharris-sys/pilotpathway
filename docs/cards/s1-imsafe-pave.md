@@ -59,11 +59,9 @@ There is a blank **CFI review** line at the end of every card.
 
 **Correct answer:** `opt-2`
 
-**Explanation:** Everything else you check before a flight is about the airplane or the conditions. IMSAFE is the one that looks at the pilot: **I**llness, **M**edication, **S**tress, **A**lcohol, **F**atigue, **E**motion. It is the first real pilot decision of the day, and the only one nobody else can make for you. Confirm in the Pilot's Handbook of Aeronautical Knowledge.
+**Explanation:** Everything else you check before a flight is about the airplane or the conditions. IMSAFE is the one that looks at the pilot: **I**llness, **M**edication, **S**tress, **A**lcohol, **F**atigue, **E**motion. You may hear an instructor give the E as Eating — that version comes from other aviation authorities and some training groups rather than the FAA, so it is worth knowing it exists, but Emotion is the one we teach. It is the first real pilot decision of the day, and the only one nobody else can make for you. Confirm in the Pilot's Handbook of Aeronautical Knowledge.
 
 **Visual:** A split graphic. On the left, a preflight walkaround silhouette with a clipboard, labelled "everything else you check." On the right, the same pilot standing still with a hand on their own chest, labelled "IMSAFE." Six small tiles beneath the right-hand figure, one per letter, with the word spelled out. No airplane on the right-hand side at all — the absence is the point.
-
-**FLAG FOR CFI:** Please confirm the expansion we are teaching for the final letter. We have written **E — Emotion**, which is the version we believe the Pilot's Handbook of Aeronautical Knowledge uses, but some instructors teach **Eating**, and a few teach both. Whatever you tell us goes into every later card and into the tutor's own answers, so it is worth getting settled once. If the answer is "both are taught, here is which one we use," say so and we will make the card reflect that.
 
 **CFI review:** ______________________________________________
 
@@ -245,7 +243,7 @@ There is a blank **CFI review** line at the end of every card.
 
 **Correct answer:** `opt-1`
 
-**Explanation:** Resignation is the one that does not look like a hazardous attitude, because it sounds like modesty rather than risk-taking. It shows up as a pilot who stops trying to influence the outcome — and a student who decides early that aviation is not really for people like them is closer to this one than to any of the others. Confirm in the Pilot's Handbook of Aeronautical Knowledge.
+**Explanation:** Resignation is the one that does not look like a hazardous attitude, because it sounds like modesty rather than risk-taking. It shows up as a pilot who stops trying to influence the outcome — one who sees an approach going wrong, decides it is out of their hands now, and rides it down instead of going around. Confirm in the Pilot's Handbook of Aeronautical Knowledge.
 
 **Visual:** A pair of hands coming off a control yoke, palms open. Beside it, an altimeter or a fuel gauge drawn mid-problem and unattended. Deliberately understated — no alarm colouring — because the card is about an attitude that does not announce itself.
 

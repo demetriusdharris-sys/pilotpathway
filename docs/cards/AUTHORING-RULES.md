@@ -61,6 +61,22 @@ If "Yes — but only when X" is the wrong answer on card after card, students st
 
 Vary the construction, and let a familiar shape be the correct answer sometimes. The pattern a student learns should be the aviation, not the card format.
 
+## 8. Never frame a student's doubt about belonging as a defect.
+
+A card must never present a student's doubt about whether aviation is for them as a personal failing, a safety risk, or a hazardous attitude. Not as the answer, not as a distractor, not as an aside in an explanation.
+
+Our students arrive carrying real doubts about money, medicals, and whether people like them become pilots. Those doubts are a response to an industry that has historically not made room for them. They are not a symptom in the student, and a card that treats them as one tells a student that the thing they were already afraid of is now also a flaw the training has diagnosed in them.
+
+Cultural grounding in this product is about access and examples — the tone, the history cards, the cost of entry, who appears in a scenario. It is never about diagnosing the student. FAA standards stay exactly where they are; what changes is who can see themselves meeting them.
+
+**The worked example, from this repository.** An early draft of Card 9 in `s1-imsafe-pave.md` taught the hazardous attitude Resignation, and its explanation ended: *"a student who decides early that aviation is not really for people like them is closer to this one than to any of the others."*
+
+Two things were wrong with it. First, it is a category error: the hazardous attitudes describe a pilot at the controls deciding they cannot affect what happens next, not a person weighing whether to start. Resignation is about the next thirty seconds of a flight. Second, and worse, it takes the exact doubt this product exists to answer and reclassifies it as a safety defect belonging to the student. A student who read that card and recognised themselves would learn that their hesitation is a hazard they carry.
+
+The fix was to cut the clause and give a concrete in-flight example instead — a pilot who sees an approach going wrong, decides it is out of their hands, and rides it down instead of going around. Same attitude, correctly located.
+
+If a card seems to need a line about belonging, it does not. Write the aviation.
+
 ---
 
 ## When a card fails one of these
