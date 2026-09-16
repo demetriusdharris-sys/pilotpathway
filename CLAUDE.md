@@ -151,6 +151,8 @@ Explicitly out of scope for that sprint: VR, live flight-school booking, full me
 
 **Measured cost:** ~0.48¢ per follow-up exchange with prompt caching (down from ~1.05–1.29¢ before conversation memory was added — caching the 2,700-token system prompt saves more than history costs).
 
+**Objective-signal judge cost:** the Claude Haiku 4.5 call that reads each exchange for per-objective signals adds **~0.05–0.10¢ per exchange** — measured from Vercel runtime logs Sep 16 2026: 0.0546¢ when it found no signal, 0.0979¢ when it found one. That is roughly 11–20% on top of the tutor call, so a full exchange costs ~0.54–0.58¢. It is logged as `Objective signal call:` with a `costCents` field and deliberately **not** written to `tutor_usage`, because it is our inference cost, not the student's usage. Vercel runtime logs are retained only briefly — to re-measure, send a tutor message and search `costCents` within minutes. Known waste: the judge still runs, and still bills, on the canned starter prompts, which carry no evidence of what the student knows.
+
 **Known open bugs:**
 - `http://localhost:3100/auth/callback` still in the production redirect allow-list.
 - **No quiz card is approved, so no student sees a quiz and `objective_mastery` — the only reportable stream — is still empty.** The machinery is built and verified; the blocker is a CFI reviewing the 18 drafted cards in `docs/cards/`. That is a person, not engineering, and it is the single biggest thing between this product and outcome data for a school.
