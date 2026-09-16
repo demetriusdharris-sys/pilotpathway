@@ -159,7 +159,6 @@ Explicitly out of scope for that sprint: VR, live flight-school booking, full me
 - `http://localhost:3100/auth/callback` still in the production redirect allow-list.
 - **A guardian deleting or downloading a minor's account leaves only a short-lived trace.** It is logged (`Guardian deleted student account:` / `Guardian data export:`) with the guardian id, student id, and verification method, but Vercel runtime logs are retained only briefly. A third party acting on a minor's data should have a permanent audit record, which needs a new table. Do this before real guardian use.
 - **No quiz card is approved, so no student sees a quiz and `objective_mastery` — the only reportable stream — is still empty.** The machinery is built and verified; the blocker is a CFI reviewing the 18 drafted cards in `docs/cards/`. That is a person, not engineering, and it is the single biggest thing between this product and outcome data for a school.
-- Losing the `0013` race returns a 500 `write_failed` rather than a message saying an invite was just created. No duplicate is made — the index does its job — but the error is unhelpful to whoever hit it.
 
 ---
 
@@ -274,6 +273,7 @@ Closes the guardian consent gap: the old `consent` INSERT policy let any authent
 - **The guardian invite email does not name the student.** Sending a minor's name to an address that has not yet been verified as their guardian is a disclosure the flow cannot justify. The cost is a parent who may not immediately know which child it is about.
 - **Guardian invite tokens are single-use and expire in 14 days.** Redemption re-checks both at write time, not only at render, and the update is conditional on `token_redeemed_at is null` so the TOCTOU window between check and write is closed.
 - **The invite route lowercases `invited_email` before every read and write.** This is load-bearing, not tidiness: `0013`'s index is on `lower(invited_email)`, so removing the lowercase would turn a found-existing-row into a constraint violation.
+- **Losing the `0013` race returns 409 `invite_in_progress`, never a retryable error.** The winning request created the invite and sends its email; the loser returns before sending anything, since its token never reached the database. It must not tell the student to try again: a retry finds the pending invite and resends, replacing the token and breaking the link just delivered. The form shows it as a notice and refreshes to the pending card. Verified on the live site Sep 16 2026 by firing two simultaneous invites from the browser console: one `200`, one `409`.
 
 ---
 
