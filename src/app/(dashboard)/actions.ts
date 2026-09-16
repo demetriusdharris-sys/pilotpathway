@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { allLessonSlugs } from "@/lib/curriculum";
+import { findLessonStageSlug } from "@/lib/curriculum-store";
 import type { LessonStatus } from "@/types/database";
 
 const VALID_STATUSES: LessonStatus[] = [
@@ -20,11 +20,8 @@ export async function setLessonStatus(
   const lessonSlug = String(formData.get("lessonSlug") ?? "");
   const status = String(formData.get("status") ?? "") as LessonStatus;
 
-  // Never trust the form: the slug must be a real lesson and the status must
-  // be one we defined, or the write is refused.
-  if (!allLessonSlugs.includes(lessonSlug)) {
-    return { error: "That lesson does not exist." };
-  }
+  // Never trust the form: the status must be one we defined and the slug must
+  // be a real lesson, or the write is refused.
   if (!VALID_STATUSES.includes(status)) {
     return { error: "That is not a valid status." };
   }
@@ -36,6 +33,17 @@ export async function setLessonStatus(
 
   if (!user) {
     return { error: "Log in again to save your progress." };
+  }
+
+  let stageSlug: string | null;
+  try {
+    stageSlug = await findLessonStageSlug(supabase, lessonSlug);
+  } catch {
+    return { error: "Could not save your progress. Try again." };
+  }
+
+  if (!stageSlug) {
+    return { error: "That lesson does not exist." };
   }
 
   const now = new Date().toISOString();
@@ -57,7 +65,7 @@ export async function setLessonStatus(
   }
 
   revalidatePath("/dashboard");
-  revalidatePath(`/stages/stage-1/${lessonSlug}`);
+  revalidatePath(`/stages/${stageSlug}/${lessonSlug}`);
 
   return {};
 }

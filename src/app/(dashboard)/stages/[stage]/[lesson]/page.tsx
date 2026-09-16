@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getSupabaseEnv } from "@/lib/supabase/env";
-import { getLesson } from "@/lib/curriculum";
+import { loadLesson } from "@/lib/curriculum-store";
 import { getProgress } from "@/lib/progress";
 import { loadConversation } from "@/lib/instructor-messages";
 import { loadApprovedCards } from "@/lib/quiz-cards";
@@ -18,12 +18,21 @@ type LessonPageProps = {
 
 export async function generateMetadata({ params }: LessonPageProps) {
   const { stage, lesson } = await params;
-  const found = getLesson(stage, lesson);
-  return {
-    title: found
-      ? `${found.lesson.title} — PilotPathway.ai`
-      : "Lesson — PilotPathway.ai",
-  };
+  const fallback = { title: "Lesson — PilotPathway.ai" };
+
+  if (!getSupabaseEnv()) {
+    return fallback;
+  }
+
+  // A tab title is not worth an error page: if the lesson cannot be read here,
+  // the page itself will report the real problem.
+  try {
+    const supabase = await createClient();
+    const found = await loadLesson(supabase, stage, lesson);
+    return found ? { title: `${found.lesson.title} — PilotPathway.ai` } : fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 export default async function LessonPage({ params }: LessonPageProps) {
@@ -32,13 +41,6 @@ export default async function LessonPage({ params }: LessonPageProps) {
   }
 
   const { stage: stageSlug, lesson: lessonSlug } = await params;
-  const found = getLesson(stageSlug, lessonSlug);
-
-  if (!found) {
-    notFound();
-  }
-
-  const { stage, lesson } = found;
 
   const supabase = await createClient();
   const {
@@ -48,6 +50,16 @@ export default async function LessonPage({ params }: LessonPageProps) {
   if (!user) {
     redirect(`/login?next=/stages/${stageSlug}/${lessonSlug}`);
   }
+
+  // After sign-in, not before: lessons are readable only by signed-in users, so
+  // looking one up first would turn "please log in" into "lesson not found".
+  const found = await loadLesson(supabase, stageSlug, lessonSlug);
+
+  if (!found) {
+    notFound();
+  }
+
+  const { stage, lesson } = found;
 
   const progress = await getProgress(user.id);
   const status = progress.get(lesson.slug) ?? "not_started";

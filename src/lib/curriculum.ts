@@ -1,9 +1,11 @@
 /**
  * Part 141-style Private Pilot ground school curriculum.
  *
- * Lesson content lives in code rather than the database: it is the same for
- * every student, it belongs in version control, and it keeps the prototype
- * free of a CMS. Only per-student progress goes to Supabase.
+ * NO LONGER THE SOURCE OF TRUTH. Since 0018 stages, lessons and objectives live
+ * in the database and are edited in the Supabase Table Editor; the app reads
+ * them through src/lib/curriculum-store.ts. The `stages` data below is not
+ * read by anything and is removed in the next step — editing it changes
+ * nothing. Only the types in this file are still used.
  *
  * ACS Areas of Operation are referenced BY NAME, not by task code. Task codes
  * (PA.I.A and the like) are revision-specific and easy to get subtly wrong,
@@ -53,7 +55,7 @@ export type Lesson = {
 
 export type Stage = {
   slug: string;
-  number: 1 | 2 | 3;
+  number: number;
   title: string;
   tagline: string;
   goal: string;

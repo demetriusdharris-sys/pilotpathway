@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getSupabaseEnv } from "@/lib/supabase/env";
 import { getProgress, summarize } from "@/lib/progress";
-import { stages } from "@/lib/curriculum";
+import { loadCurriculum } from "@/lib/curriculum-store";
 import { SignOutButton } from "@/components/sign-out-button";
 import { LessonRow } from "@/components/lesson-row";
 import { Button } from "@/components/ui/button";
@@ -26,13 +26,14 @@ export default async function DashboardPage() {
     redirect("/login?next=/dashboard");
   }
 
-  const [progress, profileResult] = await Promise.all([
+  const [progress, profileResult, stages] = await Promise.all([
     getProgress(user.id),
     supabase
       .from("profiles")
       .select("date_of_birth")
       .eq("id", user.id)
       .maybeSingle(),
+    loadCurriculum(supabase),
   ]);
 
   // Every account created before the age gate has no date of birth, and
@@ -49,6 +50,13 @@ export default async function DashboardPage() {
     typeof profileResult.data?.date_of_birth !== "string";
 
   const stageOne = stages[0];
+
+  // No stages means the curriculum could not be read. Fail loudly rather than
+  // render an empty dashboard that looks like there is nothing to learn.
+  if (!stageOne) {
+    throw new Error("The curriculum could not be loaded.");
+  }
+
   const stats = summarize(
     stageOne.lessons.map((lesson) => lesson.slug),
     progress,

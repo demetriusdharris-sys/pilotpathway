@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSupabaseEnv } from "@/lib/supabase/env";
-import { getLesson } from "@/lib/curriculum";
+import { loadLesson } from "@/lib/curriculum-store";
 import {
   estimateCostCents,
   readUsageLimits,
@@ -147,10 +147,30 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const found =
-    typeof stageSlug === "string" && typeof lessonSlug === "string"
-      ? getLesson(stageSlug, lessonSlug)
-      : undefined;
+  let found: Awaited<ReturnType<typeof loadLesson>>;
+  try {
+    found =
+      typeof stageSlug === "string" && typeof lessonSlug === "string"
+        ? await loadLesson(supabase, stageSlug, lessonSlug)
+        : undefined;
+  } catch (error) {
+    // The curriculum could not be read. Say so, rather than telling a student
+    // their lesson does not exist.
+    console.error("Tutor route could not load the lesson:", {
+      userId: user.id,
+      stageSlug,
+      lessonSlug,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return NextResponse.json(
+      {
+        error:
+          "Your instructor can't load this lesson right now. This is on our side, not yours — try again shortly.",
+        code: "curriculum_unavailable",
+      },
+      { status: 503 },
+    );
+  }
 
   if (!found) {
     return NextResponse.json(
