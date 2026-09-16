@@ -134,6 +134,7 @@ Explicitly out of scope for that sprint: VR, live flight-school booking, full me
 **Working in production:**
 - Signup / login with email confirmation enforced
 - Email confirmation works across devices — sign up on a phone, confirm on a desktop. Verified on the live site Sep 15 2026.
+- A signup error keeps the student's first name, email, and date of birth; only the password clears. The inputs in `auth-form.tsx` are controlled on purpose, because React 19 wipes uncontrolled fields when a form action finishes — do not convert them back. Verified on the live site Sep 16 2026 with a too-short password.
 - Signup collects date of birth behind a 13+ age gate, validated server-side in the Server Action before Supabase is called. Verified on the live site.
 - `date_of_birth` carried through signup metadata into `profiles`. Verified on the live site.
 - Student profile page at `/profile`: first name, and a write-once date of birth for accounts that never had one. Verified on the live site.
@@ -163,8 +164,6 @@ Explicitly out of scope for that sprint: VR, live flight-school booking, full me
 **2. Progress tracking is a checkbox.** `lesson_progress` stores one three-state flag per lesson. No per-objective tracking, no mastery score. A student who clicked through everything looks identical to one who mastered it.
 
 **3. Every existing production account has a null `date_of_birth`.** `0005` made the column nullable because production already had users. `is_adult()` fails closed, so no current user can self-grant `live_session` consent until date of birth is backfilled. This is correct safety behavior, not a bug — but it becomes a real constraint the moment live sessions are built, and the backfill is a prerequisite for that work, not an afterthought.
-
-**4. A failed signup clears the form.** React 19 resets uncontrolled fields after a form action completes, so any error returned from `signUp` wipes every field the student typed, date of birth included. Pre-existing behavior, not introduced by the date-of-birth change — but more annoying now that there is more to retype, and worst for the audience least likely to try a third time.
 
 **Per-objective mastery is the highest-leverage item on the roadmap.** It does three jobs at once: makes lessons feel personal, makes CFI endorsements defensible, and produces the outcome reporting that renews institutional contracts.
 
