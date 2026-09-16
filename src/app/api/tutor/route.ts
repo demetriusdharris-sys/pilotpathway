@@ -27,6 +27,7 @@ import {
   extractObjectiveSignals,
 } from "@/lib/objective-signals";
 import { loadLatestSignals } from "@/lib/objective-signals-read";
+import { isStarterPrompt } from "@/lib/tutor-starters";
 import { buildMasteryNotes } from "@/lib/mastery";
 import { getProgress } from "@/lib/progress";
 
@@ -361,48 +362,59 @@ export async function POST(request: NextRequest) {
         // here must not append the "connection dropped" note to a reply that
         // arrived perfectly well, and must not stop controller.close().
         try {
-          const { signals, usage: signalUsage } = await extractObjectiveSignals(
-            found.lesson,
-            question,
-            reply,
-          );
-
-          // Deliberately NOT recordTutorCost. That meters the student's daily
-          // message quota, and inference we chose to run on their conversation
-          // is our cost, not their usage. Logged so it stays visible.
-          if (signalUsage) {
-            console.info("Objective signal call:", {
+          // A starter button is a canned prompt, not the student saying
+          // anything about what they know, so the judge has no evidence to
+          // read and would bill for returning nothing. Measured Sep 16 2026:
+          // ~0.05¢ per such call.
+          if (isStarterPrompt(question, found.lesson)) {
+            console.info("Objective signal call skipped: starter prompt", {
               userId: user.id,
               lesson: found.lesson.slug,
-              signals: signals.length,
-              costCents: estimateSignalCostCents(signalUsage),
             });
-          }
+          } else {
+            const { signals, usage: signalUsage } = await extractObjectiveSignals(
+              found.lesson,
+              question,
+              reply,
+            );
 
-          // The service role is required: objective_signals has no client
-          // INSERT policy, by design — a student who can write their own
-          // readings has a mastery record that means nothing.
-          if (signals.length > 0 && assistantMessageId) {
-            const { error: signalError } = await admin
-              .from("objective_signals")
-              .insert(
-                signals.map((signal) => ({
-                  user_id: user.id,
-                  objective_id: signal.objectiveId,
-                  reading: signal.reading,
-                  confidence: signal.confidence,
-                  lesson_slug: found.lesson.slug,
-                  source_message_id: assistantMessageId,
-                })),
-              );
-
-            if (signalError) {
-              console.error("Failed to write objective signals:", {
+            // Deliberately NOT recordTutorCost. That meters the student's daily
+            // message quota, and inference we chose to run on their conversation
+            // is our cost, not their usage. Logged so it stays visible.
+            if (signalUsage) {
+              console.info("Objective signal call:", {
                 userId: user.id,
                 lesson: found.lesson.slug,
-                count: signals.length,
-                error: signalError.message,
+                signals: signals.length,
+                costCents: estimateSignalCostCents(signalUsage),
               });
+            }
+
+            // The service role is required: objective_signals has no client
+            // INSERT policy, by design — a student who can write their own
+            // readings has a mastery record that means nothing.
+            if (signals.length > 0 && assistantMessageId) {
+              const { error: signalError } = await admin
+                .from("objective_signals")
+                .insert(
+                  signals.map((signal) => ({
+                    user_id: user.id,
+                    objective_id: signal.objectiveId,
+                    reading: signal.reading,
+                    confidence: signal.confidence,
+                    lesson_slug: found.lesson.slug,
+                    source_message_id: assistantMessageId,
+                  })),
+                );
+
+              if (signalError) {
+                console.error("Failed to write objective signals:", {
+                  userId: user.id,
+                  lesson: found.lesson.slug,
+                  count: signals.length,
+                  error: signalError.message,
+                });
+              }
             }
           }
         } catch (error) {

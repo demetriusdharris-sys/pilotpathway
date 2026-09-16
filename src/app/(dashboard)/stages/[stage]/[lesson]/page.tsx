@@ -9,6 +9,7 @@ import { loadApprovedCards } from "@/lib/quiz-cards";
 import { MAX_HISTORY_MESSAGES } from "@/lib/tutor";
 import { LessonStatusControls } from "@/components/lesson-status-controls";
 import { QuizCards } from "@/components/quiz-cards";
+import { tutorStarters } from "@/lib/tutor-starters";
 import { TutorChat } from "@/components/tutor-chat";
 
 type LessonPageProps = {
@@ -122,11 +123,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
           role: m.role,
           content: m.content,
         }))}
-        starters={[
-          "Start this lesson. Teach the objective. Ask me one question.",
-          "Explain this like I've never flown before",
-          `Quiz me on ${lesson.title.toLowerCase()}`,
-        ]}
+        starters={tutorStarters(lesson)}
       />
     </main>
   );
