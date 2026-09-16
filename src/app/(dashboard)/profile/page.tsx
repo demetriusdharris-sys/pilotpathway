@@ -9,6 +9,7 @@ import {
 } from "@/lib/date-of-birth";
 import { loadGuardianLinks, type GuardianLink } from "@/lib/guardian-links";
 import { SignOutButton } from "@/components/sign-out-button";
+import { Button } from "@/components/ui/button";
 import { ProfileForm } from "@/components/profile-form";
 import { GuardianInviteForm } from "@/components/guardian-invite-form";
 
@@ -190,6 +191,25 @@ export default async function ProfilePage() {
         </section>
 
         <GuardianSection dateOfBirth={dateOfBirth} links={guardianLinks} />
+
+        <section className="border-border bg-card mt-8 rounded-lg border p-6">
+          <span className="text-gold-strong text-xs font-semibold tracking-[0.15em] uppercase">
+            Your data
+          </span>
+          <h2 className="mt-1 text-xl font-semibold">Download everything</h2>
+          <p className="text-muted-foreground mt-3 text-sm text-pretty">
+            One file with everything we hold about your account: your profile,
+            lesson progress, conversations with your instructor, and quiz
+            answers. It is yours to keep.
+          </p>
+          <Button asChild variant="outline" className="mt-4">
+            {/* A plain link, not next/link: this is a file download from an
+                API route, not a page navigation. */}
+            <a href="/api/account/export" download>
+              Download my data
+            </a>
+          </Button>
+        </section>
       </div>
     </main>
   );
