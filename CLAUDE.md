@@ -72,7 +72,7 @@ Vercel can serve an older deployment than `master` contains. Check what is actua
 - **Supabase SQL Editor wraps a multi-statement paste in a single transaction.** A failure partway through rolls the whole paste back, so there is no partial state to clean up — but also no partial progress. Fix the statement that failed and re-run the entire migration.
 - **`0010` is written for the Supabase SQL Editor specifically.** Because the editor supplies the transaction, an explicit `begin;`/`commit;` inside the file conflicts with that wrapper and caused the temp table to drop early. The file therefore opens no transaction of its own and drops its temp table explicitly. Run through `psql` it would not be atomic: each statement would autocommit, so the refusal check would fire after the writes had already landed.
 - **The founder runs git commands in a separate PowerShell window**, at the direction of a chat session. `origin/master` moving forward without Claude Code having pushed is expected and normal. This has been misdiagnosed as an automatic push three times — check this note before reporting it as an anomaly again.
-- **A commit message is not a record of apply state.** Migration commits say "(not yet applied)" because that was true when the file was written; they are never amended once the migration is applied. **As of Sep 15 2026, every migration `0001` through `0016` is applied to production and verified.** Do not infer from a commit message that a migration is pending — ask, or check the database.
+- **A commit message is not a record of apply state.** Migration commits say "(not yet applied)" because that was true when the file was written; they are never amended once the migration is applied. **As of Sep 16 2026, every migration `0001` through `0017` is applied to production and verified.** Do not infer from a commit message that a migration is pending — ask, or check the database.
 - **Secrets are not visible from the repo, and their absence there means nothing.** `.env.local` is gitignored and Vercel environment variables live in Vercel, not on disk. `RESEND_API_KEY`, `ANTHROPIC_API_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` are all set in both. Do not conclude a key is missing because grep did not find it.
 - **`pnpm lint` and `pnpm exec tsc --noEmit` do not catch Next's Server Action export rules.** A `"use server"` module may only export async functions; exporting a sync helper from one passes both checks and then fails `pnpm build`. Run the build whenever you touch a `"use server"` file.
 - **Column-level grants and RLS policies interact, and nothing but the live database will tell you.** When a table hides columns with `GRANT SELECT (...)`, every column an RLS policy reads must also be granted to the role running the query — above all when a policy on one table checks another table in a subquery. `0014` granted `quiz_cards` without `status`; the `quiz_card_options` policy checks `status` in a subquery, so every student read of the options failed with `42501` and the quiz silently rendered nothing. Lint, typecheck, and the build all passed. **The Postgres hint on that error suggests `GRANT SELECT ON <table>` — never follow it on a table that uses column grants to hide data.** It grants every column, including the ones being hidden. Grant the single column the policy needs, as `0016` did.
@@ -205,7 +205,7 @@ These are settled. Do not relitigate them without a reason.
 - **Entitlements may overlap.** A district and a sponsor can fund the same student concurrently. Access is "any active row" — not a single current plan.
 - **Milestones are student-self-reported and staff-confirmed.** `created_by` is recorded to support a staff-proposal flow later without a schema change.
 - **Nobody can confirm their own milestone.** The staff-confirm policy excludes `auth.uid()`, because `shares_org_with` self-joins `organization_members` and would otherwise let staff who are also enrolled students confirm themselves.
-- **Consent is append-only.** Revocation inserts a new row. There are deliberately no `UPDATE` and no `DELETE` policies on `consent` — history is never rewritten.
+- **Consent grants are never deleted or rewritten.** There are deliberately no `UPDATE` and no `DELETE` policies on `consent`. **Revocation sets `revoked_at` and `revocation_reason` on the grant row itself** — `has_active_consent()` treats a grant as active until that row's `revoked_at` is set, so a separate "revocation row" would deactivate nothing. (This bullet originally said revocation inserts a new row; the function never worked that way, and `0017` corrected the table comment to match.)
 - **Guardian consent expires at the subject's 18th birthday**, and the student re-grants as an adult. `re_consent_due_at` exists so they are prompted ahead of the birthday rather than blocked mid-session.
 
 **Rules for the milestone system:**
@@ -293,6 +293,25 @@ Closes the guardian consent gap: the old `consent` INSERT policy let any authent
 - **Options are shuffled on the server, once per render.** The order is passed to the client as data. Shuffling inside a client component would produce different orders on the server and client passes — a hydration mismatch.
 - **Grading re-checks that the card is still approved.** A card withdrawn between page load and answer is not scored.
 - **Card authoring follows `docs/cards/AUTHORING-RULES.md`.** Eight rules, including: options are shuffled so nothing refers to another by letter; no numbers unless settled across all trainers; sources named, never numbered; never frame a student's doubt about belonging as a defect.
+
+---
+
+## Migration `0017` — account deletion
+
+Deleting an `auth.users` row already cascades nearly all of a person's data away. But four references made the delete itself fail and roll back: `consent.granted_by` and `milestones.created_by` were `NOT NULL` yet `ON DELETE SET NULL`; and check constraints on `milestones` (a confirmed milestone must name its confirmer) and `milestone_contributors` (a credit must name a person or an organisation) were violated when the named account was deleted. `0017` makes both columns nullable and adds a `BEFORE DELETE` trigger on `auth.users`, `prepare_account_deletion`, that settles those references first. **Verified on the live site Sep 16 2026 by the founder:** deleting a test guardian who had granted consent, confirmed a milestone, and been credited on it failed before `0017` and succeeded after, with the consent kept but revoked, the milestone reverted to self-reported, and the credit removed.
+
+### Locked design decisions
+
+- **When the account that granted consent for someone else is deleted, the consent is revoked, not erased.** The subject falls back to no consent — the safe default for a minor — and the grant, who it covered, and why it ended stay on record.
+- **When a person's own account is deleted, their consent history is erased with it.** This is the existing cascade. **It needs a lawyer's answer before any school contract**: privacy law generally favours deletion, but a school may later ask for proof that consent existed.
+- **A confirmation that can no longer be attributed stops counting.** A milestone confirmed by a deleted account reverts to self-reported rather than claiming a confirmation nobody can stand behind.
+- **Only the student or a verified guardian of a minor may export or delete an account**, in the first version. Deletion requested by a school comes later, once school admin accounts exist.
+
+### Not reachable by deleting an account
+
+Deleting the database rows does not touch copies held elsewhere: Vercel runtime logs (user ids, briefly retained), Resend's send log (guardian email addresses), Supabase Auth logs, and the conversations the tutor sends to Anthropic to generate replies. These belong in a privacy policy and data processing terms, not in code.
+
+**Known trap, not yet fixed:** deleting an **organisation** credited alone on a milestone would fail the same way — `milestone_contributors.contributor_org_id` is `ON DELETE SET NULL` under the same person-or-organisation check. Nothing creates organisations or credits yet; fix it when school accounts are built.
 
 ---
 
