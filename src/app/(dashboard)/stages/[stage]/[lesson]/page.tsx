@@ -67,7 +67,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
         ← Back to dashboard
       </Link>
 
-      <span className="text-gold mt-8 block text-xs font-semibold tracking-[0.15em] uppercase">
+      <span className="text-gold-strong mt-8 block text-xs font-semibold tracking-[0.15em] uppercase">
         Stage {stage.number} · {stage.title}
       </span>
       <h1 className="mt-2 text-3xl font-semibold text-balance">

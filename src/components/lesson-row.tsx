@@ -10,7 +10,7 @@ const STATUS_LABEL: Record<LessonStatus, string> = {
 
 const STATUS_STYLE: Record<LessonStatus, string> = {
   not_started: "text-muted-foreground",
-  in_progress: "text-gold",
+  in_progress: "text-gold-strong",
   completed: "text-foreground",
 };
 

@@ -65,7 +65,7 @@ export default function HomePage() {
               key={stage.label}
               className="border-border bg-card flex flex-col gap-2 rounded-lg border p-6"
             >
-              <span className="text-gold text-xs font-semibold tracking-[0.15em] uppercase">
+              <span className="text-gold-strong text-xs font-semibold tracking-[0.15em] uppercase">
                 {stage.label}
               </span>
               <h3 className="text-lg font-semibold">{stage.title}</h3>

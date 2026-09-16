@@ -25,6 +25,12 @@ export function TutorChat({
   const [limitReached, setLimitReached] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
+  // What a screen reader hears. The reply streams in token by token, and a
+  // live region over the message itself would read every fragment aloud as
+  // it arrives. Instead this announces once that a reply has started, and once
+  // more with the whole reply when it is finished.
+  const [announcement, setAnnouncement] = useState("");
+
   async function send(text: string) {
     const question = text.trim();
     if (!question || streaming) return;
@@ -70,6 +76,7 @@ export function TutorChat({
       }
 
       setMessages([...next, { role: "assistant", content: "" }]);
+      setAnnouncement("Your instructor is replying.");
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -81,6 +88,10 @@ export function TutorChat({
         acc += decoder.decode(value, { stream: true });
         setMessages([...next, { role: "assistant", content: acc }]);
         endRef.current?.scrollIntoView({ block: "end" });
+      }
+
+      if (acc.trim()) {
+        setAnnouncement(`Your instructor replied: ${acc}`);
       }
     } catch {
       setError("Lost connection. Try again.");
@@ -97,6 +108,12 @@ export function TutorChat({
       <p className="text-muted-foreground mt-2 text-sm text-pretty">
         Your AI ground instructor. It teaches by asking — expect questions
         back. Your CFI still signs everything.
+      </p>
+
+      {/* Always rendered, so the region exists before its text changes —
+          assistive tech only announces changes to a region it already knows. */}
+      <p role="status" aria-live="polite" className="sr-only">
+        {announcement}
       </p>
 
       {messages.length === 0 ? (
@@ -124,16 +141,25 @@ export function TutorChat({
               }
             >
               {message.role === "assistant" ? (
-                <span className="text-gold mb-1 block text-xs font-semibold tracking-[0.15em] uppercase">
+                <span className="text-gold-strong mb-1 block text-xs font-semibold tracking-[0.15em] uppercase">
                   Instructor
                 </span>
               ) : null}
               <p className="whitespace-pre-wrap text-pretty">
+                {/* The instructor's messages carry a visible label; the
+                    student's do not, so say whose words these are. */}
+                {message.role === "user" ? (
+                  <span className="sr-only">You: </span>
+                ) : null}
                 {message.content}
                 {streaming &&
                 message.role === "assistant" &&
                 index === messages.length - 1 ? (
-                  <span className="animate-pulse">▍</span>
+                  // A typing cursor is decoration. Unhidden, a screen reader
+                  // reads the block character out as a symbol.
+                  <span aria-hidden className="animate-pulse">
+                    ▍
+                  </span>
                 ) : null}
               </p>
             </div>

@@ -41,7 +41,7 @@ function GuardianSection({
 
   const heading = (
     <>
-      <span className="text-gold text-xs font-semibold tracking-[0.15em] uppercase">
+      <span className="text-gold-strong text-xs font-semibold tracking-[0.15em] uppercase">
         Parent or guardian
       </span>
       <h2 className="mt-1 text-xl font-semibold">Who approves your account</h2>
@@ -171,7 +171,7 @@ export default async function ProfilePage() {
       </header>
 
       <div className="mx-auto w-full max-w-2xl px-6 py-12">
-        <span className="text-gold text-xs font-semibold tracking-[0.15em] uppercase">
+        <span className="text-gold-strong text-xs font-semibold tracking-[0.15em] uppercase">
           Your account
         </span>
         <h1 className="mt-1 text-3xl font-semibold">Profile</h1>

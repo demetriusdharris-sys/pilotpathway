@@ -101,7 +101,7 @@ export default async function DashboardPage() {
         <section className="border-border bg-card mt-10 rounded-lg border p-6">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <div>
-              <span className="text-gold text-xs font-semibold tracking-[0.15em] uppercase">
+              <span className="text-gold-strong text-xs font-semibold tracking-[0.15em] uppercase">
                 Stage {stageOne.number}
               </span>
               <h2 className="mt-1 text-xl font-semibold">{stageOne.title}</h2>

@@ -51,41 +51,49 @@ function Card({
       <span className="text-muted-foreground text-xs font-semibold tracking-[0.15em] uppercase">
         Question {index + 1} of {total}
       </span>
-      <p className="mt-2 text-base font-medium text-pretty">{card.question}</p>
-
-      <form action={formAction} className="mt-4 flex flex-col gap-3">
+      <form action={formAction} className="mt-2 flex flex-col gap-3">
         <input type="hidden" name="cardId" value={card.id} />
 
-        <div className="flex flex-col gap-2">
-          {card.options.map((option) => {
-            const isChosen = chosen === option.optionId;
-            const showAsChosen = answered
-              ? state.chosenOptionId === option.optionId
-              : isChosen;
+        {/* The question is the legend of the option group, not a separate
+            paragraph above it. A screen reader then announces it on entering
+            the group, so each choice is heard as an answer to this question
+            rather than as a free-floating option. */}
+        <fieldset className="flex flex-col gap-4">
+          <legend className="text-base font-medium text-pretty">
+            {card.question}
+          </legend>
 
-            return (
-              <label
-                key={option.optionId}
-                className={`flex cursor-pointer gap-3 rounded-md border px-3 py-2 text-sm text-pretty transition-colors ${
-                  showAsChosen
-                    ? "border-gold bg-gold/10"
-                    : "border-border hover:bg-muted/50"
-                } ${answered ? "cursor-default" : ""}`}
-              >
-                <input
-                  type="radio"
-                  name="optionId"
-                  value={option.optionId}
-                  checked={isChosen}
-                  disabled={answered}
-                  onChange={() => setChosen(option.optionId)}
-                  className="mt-1"
-                />
-                <span>{option.text}</span>
-              </label>
-            );
-          })}
-        </div>
+          <div className="flex flex-col gap-2">
+            {card.options.map((option) => {
+              const isChosen = chosen === option.optionId;
+              const showAsChosen = answered
+                ? state.chosenOptionId === option.optionId
+                : isChosen;
+
+              return (
+                <label
+                  key={option.optionId}
+                  className={`flex cursor-pointer gap-3 rounded-md border px-3 py-2 text-sm text-pretty transition-colors ${
+                    showAsChosen
+                      ? "border-gold bg-gold/10"
+                      : "border-border hover:bg-muted/50"
+                  } ${answered ? "cursor-default" : ""}`}
+                >
+                  <input
+                    type="radio"
+                    name="optionId"
+                    value={option.optionId}
+                    checked={isChosen}
+                    disabled={answered}
+                    onChange={() => setChosen(option.optionId)}
+                    className="mt-1"
+                  />
+                  <span>{option.text}</span>
+                </label>
+              );
+            })}
+          </div>
+        </fieldset>
 
         {answered ? (
           <div

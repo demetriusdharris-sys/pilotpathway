@@ -25,6 +25,7 @@
   --color-chart-1: var(--chart-1);
   --color-gold: var(--gold);
   --color-gold-foreground: var(--gold-foreground);
+  --color-gold-strong: var(--gold-strong);
   --color-navy: var(--navy);
   --color-navy-foreground: var(--navy-foreground);
   --color-ring: var(--ring);
@@ -58,6 +59,14 @@
   --navy-foreground: oklch(0.99 0 0);
   --gold: oklch(0.77 0.132 84);
   --gold-foreground: oklch(0.22 0.05 258);
+  /*
+   * Gold for TEXT on light surfaces. --gold is 2.09:1 against white, which
+   * fails WCAG 2.1 AA for any text. This is 5.11:1 on white and 4.62:1 on
+   * --muted, so it holds on either. Use text-gold-strong for gold words on a
+   * light background; keep text-gold only on navy (7.45:1) and bg-gold for
+   * buttons, where the brighter shade is correct.
+   */
+  --gold-strong: oklch(0.54 0.12 84);
 
   --background: oklch(1 0 0);
   --foreground: oklch(0.21 0.03 258);
@@ -98,6 +107,8 @@
   --navy-foreground: oklch(0.99 0 0);
   --gold: oklch(0.8 0.135 84);
   --gold-foreground: oklch(0.18 0.04 258);
+  /* On a dark surface the bright gold is the readable one. */
+  --gold-strong: oklch(0.8 0.135 84);
 
   --background: oklch(0.17 0.035 258);
   --foreground: oklch(0.97 0.005 258);
