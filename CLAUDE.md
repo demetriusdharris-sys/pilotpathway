@@ -85,6 +85,7 @@ Vercel can serve an older deployment than `master` contains. Check what is actua
 - Named exports except `page.tsx` and `layout.tsx`.
 - No `any`. Use `unknown` with narrowing. This rule currently holds at zero violations — keep it that way.
 - Never use `localStorage` or `sessionStorage`.
+- **Gold text on a light background is `text-gold-strong`, never `text-gold`.** `--gold` is 2.09:1 on white and fails WCAG AA for text of any size; `--gold-strong` is 5.11:1. `text-gold` is correct only on navy (7.45:1), and `bg-gold` with `text-gold-foreground` is correct for buttons. Decorative glyphs marked `aria-hidden` are exempt.
 - `ANTHROPIC_API_KEY` and `SUPABASE_SERVICE_ROLE_KEY` are server-only. Never `NEXT_PUBLIC_`. Never in a client component.
 - New migrations only. Never edit an existing migration file.
 - **Profile write allowlist.** Client writes to `public.profiles` are restricted by column `GRANT` to `email`, `display_name`, `first_name`, `date_of_birth`, `updated_at`. Anything else returns `42501`. RLS restricts rows, not columns — the grant is what stops a student setting their own `role` to `admin`.
@@ -136,6 +137,7 @@ Explicitly out of scope for that sprint: VR, live flight-school booking, full me
 - Email confirmation works across devices — sign up on a phone, confirm on a desktop. Verified on the live site Sep 15 2026.
 - A signup error keeps the student's first name, email, and date of birth; only the password clears. The inputs in `auth-form.tsx` are controlled on purpose, because React 19 wipes uncontrolled fields when a form action finishes — do not convert them back. Verified on the live site Sep 16 2026 with a too-short password.
 - Dashboard prompt for students with no date of birth on file, linking to `/profile`; it disappears once a date is saved, and stays hidden if the profile read fails. Verified on the live site Sep 16 2026 with an account lacking a date of birth and one that had it.
+- Accessibility pass toward WCAG 2.1 AA (Sep 16 2026). **Colour contrast verified on the live site:** gold text on white measured 2.09:1 and failed; it now uses `text-gold-strong` at 5.11:1. **Built but not yet heard on the live site with a screen reader:** tutor replies are announced once complete through a polite live region, the typing cursor is hidden from screen readers, student chat messages are labelled "You:", and each quiz question is the legend of its option group. Skip links were judged unnecessary — every page has a `<main>` landmark and headers are two or three links. Not covered: touch target size (a WCAG 2.2 criterion, not 2.1 AA; buttons are 32px) and any formal audit or VPAT.
 - Signup collects date of birth behind a 13+ age gate, validated server-side in the Server Action before Supabase is called. Verified on the live site.
 - `date_of_birth` carried through signup metadata into `profiles`. Verified on the live site.
 - Student profile page at `/profile`: first name, and a write-once date of birth for accounts that never had one. Verified on the live site.
