@@ -307,6 +307,8 @@ Deleting an `auth.users` row already cascades nearly all of a person's data away
 - **A confirmation that can no longer be attributed stops counting.** A milestone confirmed by a deleted account reverts to self-reported rather than claiming a confirmation nobody can stand behind.
 - **Only the student or a verified guardian of a minor may export or delete an account**, in the first version. Deletion requested by a school comes later, once school admin accounts exist.
 
+**Data export — `GET /api/account/export`, "Download my data" on `/profile`.** Verified on the live site Sep 16 2026: the founder's own export contained their email and today's tutor messages with no `token_hash`, and a logged-out request returned only a 401. Reads with the service role so tables without a student SELECT policy are not silently omitted; **every one of the 14 reads is filtered by the id from `getUser()`, never by anything in the request — keep it that way.** It exports the account holder's own data only (other people's account ids are left out), reads in pages because Supabase caps a request at 1,000 rows, fails entirely rather than returning a partial file, and is sent `Cache-Control: private, no-store`.
+
 ### Not reachable by deleting an account
 
 Deleting the database rows does not touch copies held elsewhere: Vercel runtime logs (user ids, briefly retained), Resend's send log (guardian email addresses), Supabase Auth logs, and the conversations the tutor sends to Anthropic to generate replies. These belong in a privacy policy and data processing terms, not in code.
