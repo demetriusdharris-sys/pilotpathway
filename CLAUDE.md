@@ -157,6 +157,7 @@ Explicitly out of scope for that sprint: VR, live flight-school booking, full me
 
 **Known open bugs:**
 - `http://localhost:3100/auth/callback` still in the production redirect allow-list.
+- **A guardian cannot yet export or delete a minor's account.** Data export and account deletion are self-service only. The agreed design also covers a verified guardian acting for a student under 18, but there is no guardian view of linked students to build it on.
 - **No quiz card is approved, so no student sees a quiz and `objective_mastery` — the only reportable stream — is still empty.** The machinery is built and verified; the blocker is a CFI reviewing the 18 drafted cards in `docs/cards/`. That is a person, not engineering, and it is the single biggest thing between this product and outcome data for a school.
 - Losing the `0013` race returns a 500 `write_failed` rather than a message saying an invite was just created. No duplicate is made — the index does its job — but the error is unhelpful to whoever hit it.
 
@@ -308,6 +309,8 @@ Deleting an `auth.users` row already cascades nearly all of a person's data away
 - **Only the student or a verified guardian of a minor may export or delete an account**, in the first version. Deletion requested by a school comes later, once school admin accounts exist.
 
 **Data export — `GET /api/account/export`, "Download my data" on `/profile`.** Verified on the live site Sep 16 2026: the founder's own export contained their email and today's tutor messages with no `token_hash`, and a logged-out request returned only a 401. Reads with the service role so tables without a student SELECT policy are not silently omitted; **every one of the 14 reads is filtered by the id from `getUser()`, never by anything in the request — keep it that way.** It exports the account holder's own data only (other people's account ids are left out), reads in pages because Supabase caps a request at 1,000 rows, fails entirely rather than returning a partial file, and is sent `Cache-Control: private, no-store`.
+
+**Account deletion — `deleteAccount` Server Action, "Delete my account" at the bottom of `/profile`.** Verified on the live site Sep 16 2026 with a throwaway account holding real tutor messages: a wrong password was refused with the account intact, then the correct password and `DELETE` removed the auth user, profile, and messages, with the id returning `0` from all three. Requires the account's password as well as the typed word, both re-checked on the server — a signed-in session alone is not enough on a shared device. **`deleteUser` must be called with `shouldSoftDelete: false`.** A soft delete keeps the `auth.users` row, so no cascade runs and every table keeps the data while the account looks deleted. The confirmation word lives in `src/lib/account-deletion.ts` because a `"use server"` module cannot export it.
 
 ### Not reachable by deleting an account
 
