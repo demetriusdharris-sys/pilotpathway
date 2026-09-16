@@ -3,9 +3,8 @@
 //   node scripts/import-cards.mjs
 //
 // Writes supabase/migrations/0015_sync_quiz_cards.sql. That file is GENERATED:
-// re-run this rather than editing it, the same way 0010 is regenerated from
-// curriculum.ts. Hand-editing is how the markdown a CFI reviewed and the rows
-// a student sees drift apart.
+// re-run this rather than editing it. Hand-editing is how the markdown a CFI
+// reviewed and the rows a student sees drift apart.
 //
 // No dependencies, deliberately. The project has no TypeScript runner and
 // adding one is outside the locked stack, so this is plain Node ESM.
@@ -220,7 +219,7 @@ begin
 
   if unknown_objectives is not null then
     raise exception
-      'Refusing to import: these objective ids do not exist in learning_objectives: %. Check the ids in docs/cards against curriculum.ts.',
+      'Refusing to import: these objective ids do not exist in learning_objectives: %. Check the ids in docs/cards against the learning_objectives table.',
       unknown_objectives;
   end if;
 end;

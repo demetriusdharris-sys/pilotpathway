@@ -83,7 +83,7 @@ If a card seems to need a line about belonging, it does not. Write the aviation.
 
 Mark it and say which rule. "Cut this one" and "this needs a number confirmed" are both useful review outcomes. A flagged card costs a rewrite; a confidently wrong card about stalls costs something else.
 
-Cards covering safety-critical objectives — see `isSafetyCritical` in `src/lib/curriculum.ts` — do not reach a student without a CFI's sign-off, whatever the review queue looks like.
+Cards covering safety-critical objectives — see the `is_safety_critical` column of `learning_objectives` — do not reach a student without a CFI's sign-off, whatever the review queue looks like.
 
 ---
 

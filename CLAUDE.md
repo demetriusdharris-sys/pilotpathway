@@ -144,7 +144,7 @@ Explicitly out of scope for that sprint: VR, live flight-school booking, full me
 - Guardian invite flow, end to end — invite route issuing hashed single-use tokens, Resend email, redemption page, and guardian status on the profile page. Verified on the live site.
 - `next` preserved through email confirmation, so a guardian who signs up to accept an invite returns to that invite instead of a bare dashboard. Verified on the live site.
 - Quiz cards on the lesson page, graded server-side, each answer written to `objective_assessments`. Confirmed by the founder on the live site Sep 15 2026 using one temporarily approved card, since reverted to draft. Students see no quiz until a CFI approves cards — see Known open bugs.
-- Curriculum: 16 Stage 1 lessons (Stages 2 and 3 are outline labels only)
+- Curriculum: 16 Stage 1 lessons (Stages 2 and 3 are outline labels only), stored in the database and editable in the Supabase Table Editor with no deploy. Verified on the live site Sep 16 2026: an edit to a lesson summary appeared on the lesson page without a deploy and was recorded in `curriculum_edits`.
 - Captain Path tutor chat with conversation memory persisted to `instructor_messages`
 - `studentFirstName` and `masteryNotes` wired to real values (previously dead parameters)
 - Rate limiting: 150 messages/user/day, 5000 global, configurable in `usage_limits` without a deploy
@@ -164,13 +164,11 @@ Explicitly out of scope for that sprint: VR, live flight-school booking, full me
 
 ## Architectural debt (deliberate, not yet paid)
 
-**1. Lesson content is hardcoded** in `src/lib/curriculum.ts`. Adding or editing a lesson requires a code change and a deploy. Neither the founder nor a CFI can fix a typo. This must move to the database — the product's entire value is curriculum.
+**1. Lesson content was hardcoded — paid for the founder, Sep 16 2026; still owed for CFIs.** Stages, lessons and objectives now live in the database and the founder edits them in the Supabase Table Editor with no code change and no deploy (see "Curriculum content" below). What is still owed: a CFI cannot edit content, because that needs an in-app editor with permissions, and edits go live with no review step. Both belong together — build the review step at the same time CFIs get editing access.
 
 **2. Progress tracking is a checkbox.** `lesson_progress` stores one three-state flag per lesson. No per-objective tracking, no mastery score. A student who clicked through everything looks identical to one who mastered it.
 
 **3. Every existing production account has a null `date_of_birth`.** `0005` made the column nullable because production already had users. `is_adult()` fails closed, so no current user can self-grant `live_session` consent until date of birth is backfilled. This is correct safety behavior, not a bug — but it becomes a real constraint the moment live sessions are built, and the backfill is a prerequisite for that work, not an afterthought. **Partly paid, Sep 16 2026:** the dashboard now prompts any student with no date of birth to add one on `/profile`, so the backfill happens as students log in. It is not complete until every active account has logged in once — check with `select count(*) from public.profiles where date_of_birth is null` before building anything that depends on it.
-
-**Debt #1 is being paid, Sep 16 2026 — in progress, three steps.** Step 1 done: `0018` created `curriculum_stages` and `curriculum_lessons`, seeded from `curriculum.ts` (3 stages, 16 lessons, all 48 objectives linked by foreign key), made objective ids and lesson/stage slugs impossible to change, and records every content edit in `curriculum_edits`. Verified in production: the report returned 3/16/48/0, renaming a lesson was refused, and a test edit was recorded and undone. **Until step 2 ships, the app still reads lessons from `curriculum.ts`, so editing a lesson in Supabase changes nothing students see.** After step 2, **never re-run `0010`**: it would overwrite database edits with the stale text in `curriculum.ts`.
 
 **Per-objective mastery is the highest-leverage item on the roadmap.** It does three jobs at once: makes lessons feel personal, makes CFI endorsements defensible, and produces the outcome reporting that renews institutional contracts.
 
@@ -252,7 +250,7 @@ Closes the guardian consent gap: the old `consent` INSERT policy let any authent
 
 **`0009` — per-objective mastery.** Adds `learning_objectives`, `objective_signals`, `objective_assessments`, and the `objective_mastery` view.
 
-**`0010` — objective sync.** Loads the 48 objectives from `src/lib/curriculum.ts` into `learning_objectives`. Generated, not hand-written: regenerate it from `curriculum.ts` rather than editing it, because a hand edit is how the ids in the two files drift apart. It is safe to re-run, and it refuses to run if it would retire an objective that already has mastery data.
+**`0010` — objective sync.** Loaded the 48 objectives from what was then `src/lib/curriculum.ts` into `learning_objectives`. **Historical — never re-run it.** Since `0018` the database is the source of truth for objectives, and re-running `0010` would overwrite live edits with stale text. `curriculum.ts` now holds types only, so the file cannot be regenerated either.
 
 ### Locked design decisions
 
@@ -296,6 +294,25 @@ Closes the guardian consent gap: the old `consent` INSERT policy let any authent
 - **Options are shuffled on the server, once per render.** The order is passed to the client as data. Shuffling inside a client component would produce different orders on the server and client passes — a hydration mismatch.
 - **Grading re-checks that the card is still approved.** A card withdrawn between page load and answer is not scored.
 - **Card authoring follows `docs/cards/AUTHORING-RULES.md`.** Eight rules, including: options are shuffled so nothing refers to another by letter; no numbers unless settled across all trainers; sources named, never numbered; never frame a student's doubt about belonging as a defect.
+
+---
+
+## Curriculum content — migration `0018`
+
+Stages, lessons, and learning objectives live in `curriculum_stages`, `curriculum_lessons`, and `learning_objectives`, and are read through `src/lib/curriculum-store.ts`. **`src/lib/curriculum.ts` holds types only — it is not where content lives.** The founder's editing guide is `docs/editing-lessons.md`.
+
+`0018` created the two tables, seeded them once from the code that existed then, linked every objective to its lesson and stage by foreign key, and added two protections. Verified in production Sep 16 2026: the seed reported 3 stages, 16 lessons, 48 linked objectives and 0 lessons without objectives; renaming a lesson was refused; a test edit was recorded and undone; and a comparison through the new loader against the old code found the database curriculum identical, field for field, before the app was switched over.
+
+### Locked design decisions
+
+- **The founder edits content in the Supabase Table Editor.** There is no in-app editor yet. CFIs editing content needs one, with permissions — a separate project.
+- **Edits go live immediately.** No preview or review step. This is no lower a bar than before, when lesson text was written straight into code without CFI review. Revisit when CFIs can edit.
+- **Every content edit is recorded.** Triggers write the previous row to `curriculum_edits` on any update or delete to stages, lessons, or objectives, ignoring saves that change only `updated_at`. That table is the undo mechanism; it has RLS on and no policies, so nothing in the app reads it.
+- **Objective ids and lesson and stage slugs cannot be changed**, enforced by the `forbid_identifier_change` trigger rather than by convention. Progress, tutor history, mastery, and quiz cards all refer to them.
+- **A failed curriculum read throws; it never returns an empty curriculum.** An empty list would render as "lesson not found" or an empty dashboard — an outage disguised as missing content. The tutor route turns it into a 503 saying the lesson cannot be loaded.
+- **The lesson page checks sign-in before looking the lesson up.** Lessons are readable only by signed-in users, so looking one up first would turn "please log in" into "not found".
+
+**Known limit:** the dashboard lists lessons for Stage 1 only. Lessons added to Stage 2 or 3 in the database would not appear until the dashboard is changed.
 
 ---
 
