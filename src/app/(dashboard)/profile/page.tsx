@@ -11,6 +11,7 @@ import { loadGuardianLinks, type GuardianLink } from "@/lib/guardian-links";
 import { SignOutButton } from "@/components/sign-out-button";
 import { Button } from "@/components/ui/button";
 import { ProfileForm } from "@/components/profile-form";
+import { DeleteAccountForm } from "@/components/delete-account-form";
 import { GuardianInviteForm } from "@/components/guardian-invite-form";
 
 /**
@@ -209,6 +210,21 @@ export default async function ProfilePage() {
               Download my data
             </a>
           </Button>
+        </section>
+
+        {/* Deliberately last, set apart, and in the destructive colour: the
+            one action on this page that cannot be undone. */}
+        <section className="border-destructive/30 mt-16 rounded-lg border p-6">
+          <h2 className="text-destructive text-xl font-semibold">
+            Delete my account
+          </h2>
+          <p className="text-muted-foreground mt-3 text-sm text-pretty">
+            This permanently removes your profile, lesson progress,
+            conversations with your instructor, quiz answers, and any guardian
+            links. <strong className="text-foreground">It cannot be undone.</strong>{" "}
+            If you want a copy of anything, download your data first.
+          </p>
+          <DeleteAccountForm />
         </section>
       </div>
     </main>

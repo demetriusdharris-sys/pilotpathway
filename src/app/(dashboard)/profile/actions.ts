@@ -1,8 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { dateOfBirthError } from "@/lib/date-of-birth";
+import { isDeleteConfirmed } from "@/lib/account-deletion";
 import type { AuthState } from "@/app/(auth)/actions";
 
 /**
@@ -103,4 +106,95 @@ export async function updateProfile(
   revalidatePath("/dashboard");
 
   return { message: "Saved." };
+}
+
+/**
+ * Permanently deletes the signed-in account and everything attached to it.
+ *
+ * Deleting the auth user is what does the work: the foreign keys cascade the
+ * student's rows away, and the trigger from 0017 first revokes (not erases)
+ * any consent this account gave for someone else. See CLAUDE.md, "Migration
+ * 0017".
+ *
+ * Two checks, because there is no undo:
+ *
+ *   - The confirmation word, re-checked here. The disabled button in the
+ *     form is a convenience, not a control.
+ *   - The account's password. A signed-in session alone is not enough: on a
+ *     shared or unlocked device, whoever is holding it could otherwise erase
+ *     a student's entire record.
+ */
+export async function deleteAccount(
+  _prevState: AuthState,
+  formData: FormData,
+): Promise<AuthState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Please log in again." };
+  }
+
+  if (!isDeleteConfirmed(String(formData.get("confirmation") ?? ""))) {
+    return { error: "Type DELETE to confirm." };
+  }
+
+  const password = String(formData.get("password") ?? "");
+
+  if (!password || !user.email) {
+    return { error: "Enter your password to confirm." };
+  }
+
+  const { error: passwordError } = await supabase.auth.signInWithPassword({
+    email: user.email,
+    password,
+  });
+
+  if (passwordError) {
+    return { error: "That password is not right. Your account was not deleted." };
+  }
+
+  const admin = createAdminClient();
+
+  if (!admin) {
+    console.error(
+      "Account deletion blocked: SUPABASE_SERVICE_ROLE_KEY is missing.",
+    );
+    return {
+      error:
+        "Your account could not be deleted right now. This is on our side, not yours. Nothing was removed.",
+    };
+  }
+
+  // shouldSoftDelete MUST be false. A soft delete keeps the auth.users row,
+  // so none of the cascades run and every table keeps the student's data —
+  // an account that looks deleted while its record stays intact.
+  const { error: deleteError } = await admin.auth.admin.deleteUser(
+    user.id,
+    false,
+  );
+
+  if (deleteError) {
+    console.error("Account deletion failed:", {
+      userId: user.id,
+      error: deleteError.message,
+    });
+    return {
+      error:
+        "Your account could not be deleted right now. Nothing was removed. Try again shortly.",
+    };
+  }
+
+  // The session now points at an account that no longer exists. Clear the
+  // cookies locally; a failure here must not undo or hide a completed delete.
+  try {
+    await supabase.auth.signOut({ scope: "local" });
+  } catch {
+    // Deliberately ignored — the account is already gone.
+  }
+
+  revalidatePath("/", "layout");
+  redirect("/account-deleted");
 }
