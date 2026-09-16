@@ -250,6 +250,8 @@ export default async function ProfilePage() {
     }
   }
 
+  const isGuardian = guardedStudents.length > 0;
+
   return (
     <main className="flex flex-1 flex-col">
       <header className="border-border border-b">
@@ -305,6 +307,12 @@ export default async function ProfilePage() {
             lesson progress, conversations with your instructor, and quiz
             answers. It is yours to keep.
           </p>
+          {isGuardian ? (
+            <p className="text-foreground mt-2 text-sm text-pretty">
+              This is your own account&apos;s data. To download a student&apos;s,
+              use their section above.
+            </p>
+          ) : null}
           <Button asChild variant="outline" className="mt-4">
             {/* A plain link, not next/link: this is a file download from an
                 API route, not a page navigation. */}
@@ -318,8 +326,18 @@ export default async function ProfilePage() {
             one action on this page that cannot be undone. */}
         <section className="border-destructive/30 mt-16 rounded-lg border p-6">
           <h2 className="text-destructive text-xl font-semibold">
-            Delete my account
+            {isGuardian ? "Delete my own account" : "Delete my account"}
           </h2>
+          {/* A guardian mistook this section for their student's delete while
+              testing. The password and typed word cannot catch that mistake —
+              they would enter their own, correctly — so the wording has to. */}
+          {isGuardian ? (
+            <p className="border-destructive/30 bg-destructive/10 text-foreground mt-3 rounded-md border px-3 py-2 text-sm text-pretty">
+              <strong>This deletes you, not a student.</strong> The accounts of
+              students you&apos;re a guardian for are not affected. To delete a
+              student&apos;s account, use their section above.
+            </p>
+          ) : null}
           <p className="text-muted-foreground mt-3 text-sm text-pretty">
             This permanently removes your profile, lesson progress,
             conversations with your instructor, quiz answers, and any guardian
