@@ -8,6 +8,12 @@ import {
   maxDateOfBirth,
 } from "@/lib/date-of-birth";
 import { loadGuardianLinks, type GuardianLink } from "@/lib/guardian-links";
+import {
+  loadGuardedStudents,
+  type GuardedStudent,
+} from "@/lib/guardian-access";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { GuardianDeleteStudentForm } from "@/components/guardian-delete-student-form";
 import { SignOutButton } from "@/components/sign-out-button";
 import { Button } from "@/components/ui/button";
 import { ProfileForm } from "@/components/profile-form";
@@ -119,6 +125,84 @@ function GuardianSection({
   );
 }
 
+/**
+ * The students this account is a verified guardian of, and what the guardian
+ * may do for each. Nothing here decides permissions — every flag comes from
+ * guardian-access.ts, and the download route and delete action re-check them
+ * on the server regardless of what this page showed.
+ */
+function GuardedStudentsSection({ students }: { students: GuardedStudent[] }) {
+  if (students.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="border-border bg-card mt-8 rounded-lg border p-6">
+      <span className="text-gold-strong text-xs font-semibold tracking-[0.15em] uppercase">
+        Guardian
+      </span>
+      <h2 className="mt-1 text-xl font-semibold">
+        Students you&apos;re a guardian for
+      </h2>
+
+      <ul className="mt-4 flex flex-col gap-4">
+        {students.map((student) => (
+          <li
+            key={student.studentId}
+            className="border-border rounded-md border p-4"
+          >
+            <p className="font-medium">{student.firstName ?? "Your student"}</p>
+            {student.email ? (
+              <p className="text-muted-foreground text-sm">{student.email}</p>
+            ) : null}
+
+            {!student.dateOfBirthKnown ? (
+              <p className="text-muted-foreground mt-3 text-sm text-pretty">
+                We don&apos;t have their date of birth yet, so guardian options
+                aren&apos;t available. They can add it on their own profile.
+              </p>
+            ) : !student.isMinor ? (
+              <p className="text-muted-foreground mt-3 text-sm text-pretty">
+                They&apos;re 18 or older, so they manage their own account.
+              </p>
+            ) : (
+              <>
+                {student.canExport ? (
+                  <Button asChild variant="outline" className="mt-4">
+                    <a
+                      href={`/api/guardian/export?student=${student.studentId}`}
+                      download
+                    >
+                      Download their data
+                    </a>
+                  </Button>
+                ) : (
+                  <p className="text-muted-foreground mt-3 text-sm text-pretty">
+                    Your link was confirmed by email. That lets you delete their
+                    account if you need to, but downloading their private
+                    instructor conversations needs your guardianship confirmed
+                    by their school or by PilotPathway staff.
+                  </p>
+                )}
+
+                <details className="mt-4">
+                  <summary className="text-destructive cursor-pointer text-sm font-medium">
+                    Delete their account
+                  </summary>
+                  <GuardianDeleteStudentForm
+                    studentId={student.studentId}
+                    studentLabel={student.firstName ?? "this student"}
+                  />
+                </details>
+              </>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export const metadata = {
   title: "Your profile — PilotPathway.ai",
 };
@@ -149,6 +233,22 @@ export default async function ProfilePage() {
     typeof profile?.date_of_birth === "string" ? profile.date_of_birth : null;
 
   const guardianLinks = await loadGuardianLinks(supabase, user.id);
+
+  // Reading a student's profile needs the service role; a guardian cannot see
+  // it under RLS. If that is unavailable or fails, the section is simply not
+  // shown — never shown with guessed permissions.
+  let guardedStudents: GuardedStudent[] = [];
+  const admin = createAdminClient();
+  if (admin) {
+    try {
+      guardedStudents = await loadGuardedStudents(admin, user.id);
+    } catch (error) {
+      console.error("Failed to load guarded students:", {
+        guardianId: user.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
 
   return (
     <main className="flex flex-1 flex-col">
@@ -192,6 +292,8 @@ export default async function ProfilePage() {
         </section>
 
         <GuardianSection dateOfBirth={dateOfBirth} links={guardianLinks} />
+
+        <GuardedStudentsSection students={guardedStudents} />
 
         <section className="border-border bg-card mt-8 rounded-lg border p-6">
           <span className="text-gold-strong text-xs font-semibold tracking-[0.15em] uppercase">

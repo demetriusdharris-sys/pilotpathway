@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { dateOfBirthError } from "@/lib/date-of-birth";
 import { isDeleteConfirmed } from "@/lib/account-deletion";
+import { authorizeGuardianAction } from "@/lib/guardian-access";
 import type { AuthState } from "@/app/(auth)/actions";
 
 /**
@@ -197,4 +198,117 @@ export async function deleteAccount(
 
   revalidatePath("/", "layout");
   redirect("/account-deleted");
+}
+
+/**
+ * A verified guardian permanently deleting a minor's account.
+ *
+ * The form names a student; that is all it does. Whether this guardian may
+ * delete that student is decided here, by authorizeGuardianAction, against
+ * the database as it stands at the moment of deleting — never by the fact
+ * that the form was shown.
+ *
+ * Same two checks as a student deleting their own account: the confirmation
+ * word, and the guardian's own password.
+ */
+export async function deleteStudentAccount(
+  _prevState: AuthState,
+  formData: FormData,
+): Promise<AuthState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Please log in again." };
+  }
+
+  const studentId = String(formData.get("studentId") ?? "").trim();
+
+  if (!studentId) {
+    return { error: "Nothing was deleted." };
+  }
+
+  if (!isDeleteConfirmed(String(formData.get("confirmation") ?? ""))) {
+    return { error: "Type DELETE to confirm." };
+  }
+
+  const password = String(formData.get("password") ?? "");
+
+  if (!password || !user.email) {
+    return { error: "Enter your password to confirm." };
+  }
+
+  const { error: passwordError } = await supabase.auth.signInWithPassword({
+    email: user.email,
+    password,
+  });
+
+  if (passwordError) {
+    return {
+      error: "That password is not right. Nothing was deleted.",
+    };
+  }
+
+  const admin = createAdminClient();
+
+  if (!admin) {
+    console.error(
+      "Guardian deletion blocked: SUPABASE_SERVICE_ROLE_KEY is missing.",
+    );
+    return {
+      error:
+        "This account could not be deleted right now. This is on our side, not yours. Nothing was removed.",
+    };
+  }
+
+  let student;
+  try {
+    student = await authorizeGuardianAction(admin, user.id, studentId);
+  } catch (error) {
+    console.error("Guardian deletion authorization failed:", {
+      guardianId: user.id,
+      studentId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return {
+      error:
+        "This account could not be deleted right now. Nothing was removed. Try again shortly.",
+    };
+  }
+
+  if (!student || !student.canDelete) {
+    return { error: "You can't delete this account. Nothing was removed." };
+  }
+
+  // shouldSoftDelete MUST be false, for the same reason as deleteAccount: a
+  // soft delete keeps the auth.users row and none of the cascades run.
+  const { error: deleteError } = await admin.auth.admin.deleteUser(
+    studentId,
+    false,
+  );
+
+  if (deleteError) {
+    console.error("Guardian deletion failed:", {
+      guardianId: user.id,
+      studentId,
+      error: deleteError.message,
+    });
+    return {
+      error:
+        "This account could not be deleted right now. Nothing was removed. Try again shortly.",
+    };
+  }
+
+  // A third party deleting a minor's account. Recorded so it can be traced.
+  console.info("Guardian deleted student account:", {
+    guardianId: user.id,
+    studentId,
+    verificationMethod: student.verificationMethod,
+  });
+
+  revalidatePath("/profile");
+
+  return { message: "Their account has been deleted." };
 }
