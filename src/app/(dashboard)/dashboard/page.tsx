@@ -6,6 +6,7 @@ import { getProgress, summarize } from "@/lib/progress";
 import { stages } from "@/lib/curriculum";
 import { SignOutButton } from "@/components/sign-out-button";
 import { LessonRow } from "@/components/lesson-row";
+import { Button } from "@/components/ui/button";
 
 export const metadata = {
   title: "Dashboard — PilotPathway.ai",
@@ -25,7 +26,28 @@ export default async function DashboardPage() {
     redirect("/login?next=/dashboard");
   }
 
-  const progress = await getProgress(user.id);
+  const [progress, profileResult] = await Promise.all([
+    getProgress(user.id),
+    supabase
+      .from("profiles")
+      .select("date_of_birth")
+      .eq("id", user.id)
+      .maybeSingle(),
+  ]);
+
+  // Every account created before the age gate has no date of birth, and
+  // is_adult() treats unknown age as a minor. Nothing else ever sends those
+  // students to the profile page, so they would stay unable to approve
+  // anything for themselves indefinitely. The prompt disappears on its own
+  // once a date is saved.
+  //
+  // Shown only when the read succeeded and the value is genuinely empty. A
+  // failed read says nothing about the student, and nagging them over our own
+  // error would be wrong.
+  const needsDateOfBirth =
+    !profileResult.error &&
+    typeof profileResult.data?.date_of_birth !== "string";
+
   const stageOne = stages[0];
   const stats = summarize(
     stageOne.lessons.map((lesson) => lesson.slug),
@@ -57,6 +79,24 @@ export default async function DashboardPage() {
       <div className="mx-auto w-full max-w-4xl px-6 py-12">
         <h1 className="text-3xl font-semibold">Welcome</h1>
         <p className="text-muted-foreground mt-2 text-sm">{user.email}</p>
+
+        {needsDateOfBirth ? (
+          <section className="border-gold/40 bg-gold/10 mt-8 flex flex-col gap-3 rounded-lg border p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="font-semibold">Add your date of birth</h2>
+              <p className="text-muted-foreground mt-1 text-sm text-pretty">
+                It takes a few seconds, and it tells us which features you can
+                turn on yourself. Your lessons stay open either way.
+              </p>
+            </div>
+            <Button
+              asChild
+              className="bg-gold text-gold-foreground hover:bg-gold/90 shrink-0"
+            >
+              <Link href="/profile">Add it now</Link>
+            </Button>
+          </section>
+        ) : null}
 
         <section className="border-border bg-card mt-10 rounded-lg border p-6">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
