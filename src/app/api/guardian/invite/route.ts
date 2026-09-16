@@ -185,9 +185,10 @@ export async function POST(request: NextRequest) {
     Date.now() + INVITE_TTL_DAYS * 24 * 60 * 60 * 1000,
   ).toISOString();
 
-  // There is no unique constraint on (student_user_id, invited_email) in 0007,
-  // so this cannot be a single upsert. Resending overwrites the pending row's
-  // token, which also invalidates any link already in a mailbox.
+  // Read-then-write rather than an upsert: 0013's unique index is a partial
+  // index on lower(invited_email), which an upsert's conflict target cannot
+  // name. Resending overwrites the pending row's token, which also invalidates
+  // any link already in a mailbox.
   const writeError = pending
     ? (
         await admin
@@ -216,6 +217,29 @@ export async function POST(request: NextRequest) {
           guardian_user_id: null,
         })
       ).error;
+
+  // Two invites to the same address at the same instant — a double tap, or two
+  // tabs. Both read "no pending invite", both insert, and 0013's unique index
+  // rejects the second with 23505. The first request has created the invite
+  // and is sending its email; that one is correct and stands.
+  //
+  // This request returns BEFORE sending anything. Its token never reached the
+  // database, so an email from it would carry a dead link. And it must not say
+  // "try again": retrying finds the pending invite and resends, which replaces
+  // the token and breaks the link the first email just delivered.
+  if (writeError && !pending && writeError.code === "23505") {
+    console.info("Guardian invite already in progress:", {
+      studentUserId: user.id,
+    });
+    return NextResponse.json(
+      {
+        error:
+          "An invite to that address was just sent. Give it a few minutes to arrive before resending.",
+        code: "invite_in_progress",
+      },
+      { status: 409 },
+    );
+  }
 
   if (writeError) {
     console.error("Guardian invite write failed:", {

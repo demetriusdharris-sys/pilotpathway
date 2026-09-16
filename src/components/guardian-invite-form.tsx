@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 type Outcome =
   | { kind: "sent"; email: string }
   | { kind: "created_not_sent" }
+  | { kind: "in_progress"; message: string }
   | { kind: "error"; message: string };
 
 /**
@@ -19,9 +20,10 @@ function readResponse(value: unknown): {
   ok: boolean;
   emailSent: boolean;
   error: string | null;
+  code: string | null;
 } {
   if (typeof value !== "object" || value === null) {
-    return { ok: false, emailSent: false, error: null };
+    return { ok: false, emailSent: false, error: null, code: null };
   }
 
   const record: Record<string, unknown> = { ...value };
@@ -30,6 +32,7 @@ function readResponse(value: unknown): {
     ok: record.ok === true,
     emailSent: record.emailSent === true,
     error: typeof record.error === "string" ? record.error : null,
+    code: typeof record.code === "string" ? record.code : null,
   };
 }
 
@@ -66,6 +69,20 @@ export function GuardianInviteForm({
       });
 
       const parsed = readResponse(await response.json().catch(() => null));
+
+      // A duplicate of an invite that another request created a moment ago.
+      // Not a failure — the invite exists and its email is on the way — so it
+      // is shown as information, and the section refreshes to the pending
+      // card. Leaving this form on screen would invite a retry, and a retry
+      // resends, replacing the token and breaking the link just delivered.
+      if (parsed.code === "invite_in_progress") {
+        setOutcome({
+          kind: "in_progress",
+          message: parsed.error ?? "An invite to that address was just sent.",
+        });
+        router.refresh();
+        return;
+      }
 
       if (!response.ok || !parsed.ok) {
         setOutcome({ kind: "error", message: parsed.error ?? GENERIC_ERROR });
@@ -128,6 +145,15 @@ export function GuardianInviteForm({
         >
           We saved the invite, but the email did not go out. Use resend in a
           moment — nothing is lost.
+        </p>
+      ) : null}
+
+      {outcome?.kind === "in_progress" ? (
+        <p
+          role="status"
+          className="border-border bg-secondary text-secondary-foreground rounded-md border px-3 py-2 text-sm text-pretty"
+        >
+          {outcome.message}
         </p>
       ) : null}
 
