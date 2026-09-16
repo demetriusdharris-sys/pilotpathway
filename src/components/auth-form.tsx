@@ -74,6 +74,30 @@ export function AuthForm({
 }: AuthFormProps) {
   const [state, formAction] = useActionState<AuthState, FormData>(action, {});
 
+  // Controlled on purpose. React 19 resets uncontrolled fields once a form
+  // action completes, so before this, any error from the server wiped
+  // everything the student had typed -- name, email, and the date of birth
+  // they had just picked out of a date wheel on a phone. Retyping all of it to
+  // fix one mistake is where someone decides this is not for them. Controlled
+  // values survive the reset.
+  //
+  // The password is deliberately NOT kept. It is the one field a browser or
+  // password manager refills for free, and the most common error is that the
+  // password itself needs changing.
+  const [firstName, setFirstName] = useState("");
+  const [email, setEmail] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
+
+  // Clear on success, so a finished signup does not leave the student's
+  // details sitting on screen under "check your email". Errors keep them.
+  useEffect(() => {
+    if (state.message) {
+      setFirstName("");
+      setEmail("");
+      setDateOfBirth("");
+    }
+  }, [state.message]);
+
   return (
     <form action={formAction} className="flex flex-col gap-5">
       {next ? <input type="hidden" name="next" value={next} /> : null}
@@ -93,6 +117,8 @@ export function AuthForm({
             autoComplete="given-name"
             maxLength={60}
             placeholder="What should your instructor call you?"
+            value={firstName}
+            onChange={(event) => setFirstName(event.target.value)}
           />
         </div>
       ) : null}
@@ -107,6 +133,8 @@ export function AuthForm({
             required
             min="1900-01-01"
             max={maxDateOfBirth}
+            value={dateOfBirth}
+            onChange={(event) => setDateOfBirth(event.target.value)}
           />
           <p className="text-muted-foreground text-xs text-pretty">
             You must be at least 13 to sign up. Under 18, a parent or guardian
@@ -124,6 +152,8 @@ export function AuthForm({
           autoComplete="email"
           required
           placeholder="you@example.com"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
         />
       </div>
 
