@@ -135,6 +135,7 @@ Explicitly out of scope for that sprint: VR, live flight-school booking, full me
 - Signup / login with email confirmation enforced
 - Email confirmation works across devices — sign up on a phone, confirm on a desktop. Verified on the live site Sep 15 2026.
 - A signup error keeps the student's first name, email, and date of birth; only the password clears. The inputs in `auth-form.tsx` are controlled on purpose, because React 19 wipes uncontrolled fields when a form action finishes — do not convert them back. Verified on the live site Sep 16 2026 with a too-short password.
+- Dashboard prompt for students with no date of birth on file, linking to `/profile`; it disappears once a date is saved, and stays hidden if the profile read fails. Verified on the live site Sep 16 2026 with an account lacking a date of birth and one that had it.
 - Signup collects date of birth behind a 13+ age gate, validated server-side in the Server Action before Supabase is called. Verified on the live site.
 - `date_of_birth` carried through signup metadata into `profiles`. Verified on the live site.
 - Student profile page at `/profile`: first name, and a write-once date of birth for accounts that never had one. Verified on the live site.
@@ -163,7 +164,7 @@ Explicitly out of scope for that sprint: VR, live flight-school booking, full me
 
 **2. Progress tracking is a checkbox.** `lesson_progress` stores one three-state flag per lesson. No per-objective tracking, no mastery score. A student who clicked through everything looks identical to one who mastered it.
 
-**3. Every existing production account has a null `date_of_birth`.** `0005` made the column nullable because production already had users. `is_adult()` fails closed, so no current user can self-grant `live_session` consent until date of birth is backfilled. This is correct safety behavior, not a bug — but it becomes a real constraint the moment live sessions are built, and the backfill is a prerequisite for that work, not an afterthought.
+**3. Every existing production account has a null `date_of_birth`.** `0005` made the column nullable because production already had users. `is_adult()` fails closed, so no current user can self-grant `live_session` consent until date of birth is backfilled. This is correct safety behavior, not a bug — but it becomes a real constraint the moment live sessions are built, and the backfill is a prerequisite for that work, not an afterthought. **Partly paid, Sep 16 2026:** the dashboard now prompts any student with no date of birth to add one on `/profile`, so the backfill happens as students log in. It is not complete until every active account has logged in once — check with `select count(*) from public.profiles where date_of_birth is null` before building anything that depends on it.
 
 **Per-objective mastery is the highest-leverage item on the roadmap.** It does three jobs at once: makes lessons feel personal, makes CFI endorsements defensible, and produces the outcome reporting that renews institutional contracts.
 
