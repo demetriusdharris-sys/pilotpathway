@@ -6,6 +6,8 @@ import { loadLesson } from "@/lib/curriculum-store";
 import { getProgress } from "@/lib/progress";
 import { loadConversation } from "@/lib/instructor-messages";
 import { loadApprovedCards } from "@/lib/quiz-cards";
+import { loadAssessableObjectives, loadMastery } from "@/lib/objective-mastery";
+import { ObjectiveList } from "@/components/objective-list";
 import { MAX_HISTORY_MESSAGES } from "@/lib/tutor";
 import { LessonStatusControls } from "@/components/lesson-status-controls";
 import { QuizCards } from "@/components/quiz-cards";
@@ -29,7 +31,9 @@ export async function generateMetadata({ params }: LessonPageProps) {
   try {
     const supabase = await createClient();
     const found = await loadLesson(supabase, stage, lesson);
-    return found ? { title: `${found.lesson.title} — PilotPathway.ai` } : fallback;
+    return found
+      ? { title: `${found.lesson.title} — PilotPathway.ai` }
+      : fallback;
   } catch {
     return fallback;
   }
@@ -64,11 +68,14 @@ export default async function LessonPage({ params }: LessonPageProps) {
   const progress = await getProgress(user.id);
   const status = progress.get(lesson.slug) ?? "not_started";
 
-  // Prior conversation, so a refresh no longer destroys the thread. Approved
-  // cards load alongside it -- both are independent reads.
-  const [history, cards] = await Promise.all([
+  // Prior conversation, so a refresh no longer destroys the thread. The
+  // approved cards, what this student has shown, and which objectives can be
+  // shown at all load alongside it -- all independent reads.
+  const [history, cards, mastery, assessable] = await Promise.all([
     loadConversation(supabase, user.id, lesson.slug, MAX_HISTORY_MESSAGES),
     loadApprovedCards(supabase, lesson.slug),
+    loadMastery(supabase, user.id),
+    loadAssessableObjectives(supabase, lesson.slug),
   ]);
 
   return (
@@ -88,21 +95,11 @@ export default async function LessonPage({ params }: LessonPageProps) {
       </h1>
       <p className="text-muted-foreground mt-3 text-pretty">{lesson.summary}</p>
 
-      <section className="mt-10">
-        <h2 className="text-sm font-semibold tracking-[0.15em] uppercase">
-          What you will be able to do
-        </h2>
-        <ul className="mt-4 flex flex-col gap-3">
-          {lesson.objectives.map((objective) => (
-            <li key={objective.id} className="flex gap-3 text-sm text-pretty">
-              <span aria-hidden className="text-gold mt-px">
-                ✓
-              </span>
-              <span>{objective.text}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <ObjectiveList
+        objectives={lesson.objectives}
+        mastery={mastery}
+        assessable={assessable}
+      />
 
       <section className="border-border bg-muted/40 mt-10 rounded-lg border p-5">
         <h2 className="text-sm font-semibold tracking-[0.15em] uppercase">

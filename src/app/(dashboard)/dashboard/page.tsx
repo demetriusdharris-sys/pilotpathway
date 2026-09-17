@@ -5,6 +5,12 @@ import { getSupabaseEnv } from "@/lib/supabase/env";
 import { getProgress, summarize, type ProgressBySlug } from "@/lib/progress";
 import type { Stage } from "@/lib/curriculum";
 import { loadCurriculum } from "@/lib/curriculum-store";
+import {
+  loadAssessableObjectives,
+  loadMastery,
+  masterySummary,
+  type MasteryByObjective,
+} from "@/lib/objective-mastery";
 import { SignOutButton } from "@/components/sign-out-button";
 import { LessonRow } from "@/components/lesson-row";
 import { Button } from "@/components/ui/button";
@@ -27,15 +33,18 @@ export default async function DashboardPage() {
     redirect("/login?next=/dashboard");
   }
 
-  const [progress, profileResult, stages] = await Promise.all([
-    getProgress(user.id),
-    supabase
-      .from("profiles")
-      .select("date_of_birth")
-      .eq("id", user.id)
-      .maybeSingle(),
-    loadCurriculum(supabase),
-  ]);
+  const [progress, profileResult, stages, mastery, assessable] =
+    await Promise.all([
+      getProgress(user.id),
+      supabase
+        .from("profiles")
+        .select("date_of_birth")
+        .eq("id", user.id)
+        .maybeSingle(),
+      loadCurriculum(supabase),
+      loadMastery(supabase, user.id),
+      loadAssessableObjectives(supabase),
+    ]);
 
   // Every account created before the age gate has no date of birth, and
   // is_adult() treats unknown age as a minor. Nothing else ever sends those
@@ -107,7 +116,13 @@ export default async function DashboardPage() {
         ) : null}
 
         {openStages.map((stage) => (
-          <StageSection key={stage.slug} stage={stage} progress={progress} />
+          <StageSection
+            key={stage.slug}
+            stage={stage}
+            progress={progress}
+            mastery={mastery}
+            assessable={assessable}
+          />
         ))}
 
         {upcomingStages.length > 0 ? (
@@ -136,13 +151,29 @@ export default async function DashboardPage() {
 function StageSection({
   stage,
   progress,
+  mastery,
+  assessable,
 }: {
   stage: Stage;
   progress: ProgressBySlug;
+  mastery: MasteryByObjective;
+  assessable: Set<string>;
 }) {
   const stats = summarize(
     stage.lessons.map((lesson) => lesson.slug),
     progress,
+  );
+
+  // Marking a lesson complete is the student saying they went through it.
+  // This is the part they had to show. It counts only objectives with an
+  // approved quiz behind them, so an objective nobody has written a card for
+  // yet is not held against the student.
+  const shown = masterySummary(
+    stage.lessons.flatMap((lesson) =>
+      lesson.objectives.map((objective) => objective.id),
+    ),
+    assessable,
+    mastery,
   );
 
   return (
@@ -154,9 +185,16 @@ function StageSection({
           </span>
           <h2 className="mt-1 text-xl font-semibold">{stage.title}</h2>
         </div>
-        <p className="text-muted-foreground text-sm">
-          {stats.completed} of {stats.total} lessons complete
-        </p>
+        <div className="text-muted-foreground text-sm sm:text-right">
+          <p>
+            {stats.completed} of {stats.total} lessons complete
+          </p>
+          {shown.available > 0 ? (
+            <p className="mt-0.5">
+              {shown.shown} of {shown.available} objectives shown
+            </p>
+          ) : null}
+        </div>
       </div>
 
       <p className="text-muted-foreground mt-3 text-sm text-pretty">
