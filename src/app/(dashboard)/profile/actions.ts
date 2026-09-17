@@ -7,6 +7,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { dateOfBirthError } from "@/lib/date-of-birth";
 import { isDeleteConfirmed } from "@/lib/account-deletion";
 import { authorizeGuardianAction } from "@/lib/guardian-access";
+import {
+  settleGuardianAction,
+  startGuardianAction,
+} from "@/lib/guardian-audit";
 import type { AuthState } from "@/app/(auth)/actions";
 
 /**
@@ -282,6 +286,29 @@ export async function deleteStudentAccount(
     return { error: "You can't delete this account. Nothing was removed." };
   }
 
+  // A third party deleting a minor's account must leave a permanent record.
+  // Written before the delete; if it cannot be written, nothing is deleted.
+  let recordId: number;
+  try {
+    recordId = await startGuardianAction(admin, {
+      action: "delete_account",
+      guardianId: user.id,
+      guardianEmail: user.email ?? null,
+      studentId,
+      verificationMethod: student.verificationMethod,
+    });
+  } catch (error) {
+    console.error("Guardian deletion blocked: audit record failed:", {
+      guardianId: user.id,
+      studentId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return {
+      error:
+        "This account could not be deleted right now. Nothing was removed. Try again shortly.",
+    };
+  }
+
   // shouldSoftDelete MUST be false, for the same reason as deleteAccount: a
   // soft delete keeps the auth.users row and none of the cascades run.
   const { error: deleteError } = await admin.auth.admin.deleteUser(
@@ -290,6 +317,7 @@ export async function deleteStudentAccount(
   );
 
   if (deleteError) {
+    await settleGuardianAction(admin, recordId, "failed");
     console.error("Guardian deletion failed:", {
       guardianId: user.id,
       studentId,
@@ -301,8 +329,10 @@ export async function deleteStudentAccount(
     };
   }
 
-  // A third party deleting a minor's account. Recorded so it can be traced.
+  await settleGuardianAction(admin, recordId, "completed");
+
   console.info("Guardian deleted student account:", {
+    recordId,
     guardianId: user.id,
     studentId,
     verificationMethod: student.verificationMethod,

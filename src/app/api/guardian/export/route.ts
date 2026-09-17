@@ -3,6 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { buildAccountExport } from "@/lib/account-export";
 import { authorizeGuardianAction } from "@/lib/guardian-access";
+import {
+  settleGuardianAction,
+  startGuardianAction,
+} from "@/lib/guardian-audit";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -62,12 +66,27 @@ export async function GET(request: NextRequest) {
     return refused;
   }
 
+  // Set once the permanent record exists, so a failure after that point can
+  // mark it failed.
+  let recordId: number | null = null;
+
   try {
     const student = await authorizeGuardianAction(admin, user.id, studentId);
 
     if (!student || !student.canExport) {
       return refused;
     }
+
+    // A third party reading a minor's data must leave a permanent record.
+    // Written before any of the student's data is read; if it cannot be
+    // written, the catch below refuses the download.
+    recordId = await startGuardianAction(admin, {
+      action: "export_data",
+      guardianId: user.id,
+      guardianEmail: user.email ?? null,
+      studentId,
+      verificationMethod: student.verificationMethod,
+    });
 
     const { data: authUser } = await admin.auth.admin.getUserById(studentId);
 
@@ -82,8 +101,10 @@ export async function GET(request: NextRequest) {
       "guardian",
     );
 
-    // A third party reading a minor's data. Recorded so it can be traced.
+    await settleGuardianAction(admin, recordId, "completed");
+
     console.info("Guardian data export:", {
+      recordId,
       guardianId: user.id,
       studentId,
       verificationMethod: student.verificationMethod,
@@ -100,7 +121,11 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
+    if (recordId !== null) {
+      await settleGuardianAction(admin, recordId, "failed");
+    }
     console.error("Guardian data export failed:", {
+      recordId,
       guardianId: user.id,
       studentId,
       error: error instanceof Error ? error.message : String(error),
