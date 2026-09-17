@@ -156,7 +156,7 @@ begin
 
   if unknown_objectives is not null then
     raise exception
-      'Refusing to import: these objective ids do not exist in learning_objectives: %. Check the ids in docs/cards against curriculum.ts.',
+      'Refusing to import: these objective ids do not exist in learning_objectives: %. Check the ids in docs/cards against the learning_objectives table.',
       unknown_objectives;
   end if;
 end;

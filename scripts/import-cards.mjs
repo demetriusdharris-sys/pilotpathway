@@ -12,10 +12,9 @@
 // Everything imports as status 'draft'. Nothing here can approve a card —
 // approval means a CFI's name and the date, written against the row.
 
-import { readFileSync, writeFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { writeFileSync } from "node:fs";
+import { parseAllCardDocuments } from "./lib/cards.mjs";
 
-const CARDS_DIR = "docs/cards";
 const OUT = "supabase/migrations/0015_sync_quiz_cards.sql";
 
 /** SQL single-quoted literal. */
@@ -24,114 +23,15 @@ function lit(value) {
   return `'${String(value).replace(/'/g, "''")}'`;
 }
 
-function fail(message) {
-  console.error(`import-cards: ${message}`);
+let documents;
+try {
+  documents = parseAllCardDocuments();
+} catch (error) {
+  console.error(`import-cards: ${error.message}`);
   process.exit(1);
 }
 
-/**
- * Pulls one `**Label:** value` field from a card block. Single line only —
- * every field in the card format is written on one line.
- */
-function field(block, label) {
-  const m = block.match(new RegExp(`^\\*\\*${label}:\\*\\* (.+)$`, "m"));
-  return m ? m[1].trim() : null;
-}
-
-function parseCard(block, file) {
-  const titleLine = block.split("\n", 1)[0].trim();
-
-  const objectiveId = (block.match(/^\*\*Objective ID:\*\* `([^`]+)`$/m) ??
-    [])[1];
-  if (!objectiveId) fail(`${file}: card "${titleLine}" has no Objective ID`);
-
-  const question = field(block, "Question");
-  if (!question) fail(`${file}: card "${titleLine}" has no Question`);
-
-  const explanation = field(block, "Explanation");
-  if (!explanation) fail(`${file}: card "${titleLine}" has no Explanation`);
-
-  // Optional. A card with no visual described yet is still importable.
-  const visual = field(block, "Visual");
-
-  const options = [
-    ...block.matchAll(/^- \*\*[A-D]\.\*\* \(`(opt-[1-4])`\) (.+)$/gm),
-  ].map((m) => ({ optionId: m[1], text: m[2].trim() }));
-
-  if (options.length < 3 || options.length > 4) {
-    fail(
-      `${file}: card "${titleLine}" has ${options.length} options, expected 3 or 4`,
-    );
-  }
-
-  const ids = new Set(options.map((o) => o.optionId));
-  if (ids.size !== options.length) {
-    fail(`${file}: card "${titleLine}" reuses an option id`);
-  }
-
-  const correct = (block.match(/^\*\*Correct answer:\*\* `(opt-[1-4])`$/m) ??
-    [])[1];
-  if (!correct) {
-    fail(
-      `${file}: card "${titleLine}" has no Correct answer, or it still names a letter`,
-    );
-  }
-  if (!ids.has(correct)) {
-    fail(
-      `${file}: card "${titleLine}" marks ${correct} correct, but has no such option`,
-    );
-  }
-
-  return {
-    objectiveId,
-    lessonSlug: objectiveId.split(".")[0],
-    question,
-    explanation,
-    visual,
-    options: options.map((o) => ({ ...o, isCorrect: o.optionId === correct })),
-    // Carried for the report only: a card still carrying a value gap or an
-    // open flag is not ready for a reviewer to approve.
-    hasValueGap: block.includes("[CFI: confirm value]"),
-    hasOpenFlag: /^\*\*FLAG FOR CFI:\*\*/m.test(block),
-  };
-}
-
-function parseFile(file) {
-  const raw = readFileSync(join(CARDS_DIR, file), "utf8");
-
-  // Everything before the first card heading is the reviewer intro.
-  const blocks = raw.split(/^### Card /m).slice(1);
-  if (blocks.length === 0) fail(`${file}: no cards found`);
-
-  const cards = blocks.map((b) => parseCard(b, file));
-
-  // Position is the card's index within its objective, from 1, and the card
-  // id is built from it. Stable across re-imports as long as card order in
-  // the document is stable.
-  const seen = new Map();
-  for (const card of cards) {
-    const n = (seen.get(card.objectiveId) ?? 0) + 1;
-    seen.set(card.objectiveId, n);
-    card.position = n;
-    card.id = `${card.objectiveId}.c${n}`;
-  }
-
-  return cards;
-}
-
-const files = readdirSync(CARDS_DIR)
-  .filter((f) => f.endsWith(".md") && f !== "AUTHORING-RULES.md")
-  .sort();
-
-if (files.length === 0) fail("no card documents found in docs/cards");
-
-const cards = files.flatMap(parseFile);
-
-const byId = new Set();
-for (const card of cards) {
-  if (byId.has(card.id)) fail(`duplicate card id ${card.id}`);
-  byId.add(card.id);
-}
+const cards = documents.flatMap((document) => document.cards);
 
 const cardRows = cards
   .map(
@@ -322,10 +222,9 @@ writeFileSync(OUT, sql, "utf8");
 const gaps = cards.filter((c) => c.hasValueGap).length;
 const flags = cards.filter((c) => c.hasOpenFlag).length;
 
-console.log(`import-cards: ${files.length} document(s) → ${OUT}`);
-for (const file of files) {
-  const n = parseFile(file).length;
-  console.log(`  ${file}: ${n} cards`);
+console.log(`import-cards: ${documents.length} document(s) → ${OUT}`);
+for (const document of documents) {
+  console.log(`  ${document.file}: ${document.cards.length} cards`);
 }
 console.log(`  ${cards.length} cards, ${cards.length * 4} option rows (max)`);
 console.log(

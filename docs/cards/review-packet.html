@@ -1,0 +1,1192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quiz card review — PilotPathway.ai</title>
+<style>
+  :root { --ink: #1a1a1a; --muted: #5a5a5a; --line: #d6d6d6; --gold: #7a5c12; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0 auto; padding: 2rem 1.25rem 4rem; max-width: 46rem;
+    font: 16px/1.55 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--ink); background: #fff;
+  }
+  h1 { font-size: 1.6rem; line-height: 1.2; margin: 0 0 .25rem; }
+  h2 { font-size: 1.25rem; margin: 2.5rem 0 .25rem; }
+  h3 { font-size: 1rem; margin: 1.75rem 0 .1rem; }
+  h4 { font-size: 1rem; margin: 0; font-weight: 600; }
+  p { margin: .6rem 0; }
+  code { font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: .85em; }
+  .subtitle { color: var(--muted); margin-top: 0; }
+  .label { font-weight: 600; }
+  .intro { border: 1px solid var(--line); border-radius: 6px; padding: 1rem 1.25rem; }
+  .intro ol, .intro ul { padding-left: 1.2rem; }
+  .intro li { margin: .4rem 0; }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .95rem; }
+  th, td { border-bottom: 1px solid var(--line); padding: .4rem .5rem; text-align: left; }
+  .num { text-align: right; width: 6rem; }
+  .lesson-meta, .objective-id { color: var(--muted); font-size: .9rem; margin-top: .1rem; }
+  .objective h3 { padding-top: .75rem; border-top: 2px solid var(--ink); }
+  .card {
+    border: 1px solid var(--line); border-radius: 6px;
+    padding: 1rem 1.1rem; margin: 1rem 0;
+    break-inside: avoid; page-break-inside: avoid;
+  }
+  .card.needs-answer { border-left: 4px solid var(--gold); }
+  .card-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem; }
+  .card-number { font-weight: 700; }
+  .card-id { color: var(--muted); font-size: .8rem; margin-left: auto; }
+  .question { font-size: 1.02rem; }
+  .options { list-style: none; margin: .75rem 0; padding: 0; }
+  .option {
+    display: grid; grid-template-columns: 1.4rem 1fr auto; gap: .1rem .5rem;
+    align-items: baseline; padding: .35rem .5rem; border-radius: 4px;
+  }
+  .option.correct { background: #f4efe0; }
+  .letter { font-weight: 600; color: var(--muted); }
+  .option-id { color: var(--muted); font-size: .8rem; }
+  .mark { grid-column: 2 / -1; font-size: .78rem; text-transform: uppercase;
+          letter-spacing: .08em; color: var(--gold); font-weight: 700; }
+  .mark:empty { display: none; }
+  .explanation, .visual, .flag { font-size: .95rem; }
+  .visual { color: var(--muted); }
+  .flag { border-left: 3px solid var(--gold); padding-left: .75rem; }
+  mark.gap { background: #ffe9a8; padding: 0 .25rem; border-radius: 3px; font-weight: 600; }
+  .review { margin-top: 1rem; padding-top: .75rem; border-top: 1px dashed var(--line); }
+  .review-choices { font-size: .9rem; display: flex; flex-wrap: wrap; gap: .35rem 1.25rem; }
+  .choice { white-space: nowrap; }
+  .box {
+    display: inline-block; width: .85rem; height: .85rem;
+    border: 1px solid var(--ink); margin-right: .4rem; vertical-align: middle;
+  }
+  .review-notes { margin-bottom: .2rem; font-size: .9rem; }
+  .rule { border-bottom: 1px solid var(--line); height: 1.3rem; margin: 0; }
+  .signoff { border: 2px solid var(--ink); border-radius: 6px; padding: 1rem 1.25rem; margin-top: 3rem; }
+  footer { color: var(--muted); font-size: .85rem; margin-top: 3rem; }
+  @media print {
+    body { padding: 0; max-width: none; font-size: 11pt; }
+    .card { box-shadow: none; }
+    .option.correct { background: none; text-decoration: none; }
+    .option.correct .option-text { font-weight: 700; }
+    mark.gap { background: none; border: 1px solid var(--ink); }
+    a { text-decoration: none; color: inherit; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Quiz card review</h1>
+<p class="subtitle">PilotPathway.ai — Private Pilot ground school · 18 draft cards · prepared 2026-09-17</p>
+
+<section class="intro">
+  <h2 style="margin-top:.25rem">What we are asking you to do</h2>
+
+  <p>These are multiple-choice cards for an AI-assisted ground school for students
+  aged roughly 16 to 26, most of them new to aviation. <strong>No student has seen
+  any of them.</strong> Nothing reaches a student until a CFI approves it by name,
+  and that is what this packet is for.</p>
+
+  <p>For each card, please judge three things:</p>
+
+  <ol>
+    <li><strong>Is it accurate?</strong> If a card is wrong, or right but
+    misleading, say so. "Cut this one" is a useful answer.</li>
+    <li><strong>Are the wrong answers realistic?</strong> Each wrong option is
+    meant to be a mistake a real student pilot makes. An obviously silly option
+    teaches nothing — the student picks the right answer by elimination and
+    learns that they are good at tests.</li>
+    <li><strong>Does the card test the objective it sits under?</strong> The
+    objective is printed above each group of cards.</li>
+  </ol>
+
+  <p>Two things we need you to fill in, marked in the text:</p>
+
+  <ul>
+    <li><strong>value needed</strong> — a number that is aircraft-specific, or
+    one we were not certain of. We left a gap rather than guess. Please fill it
+    in, or tell us the card reads better with no number at all.
+    4 cards carry one.</li>
+    <li><strong>Our own doubt about this card</strong> — a specific question we
+    have written down for you. 4 cards carry one.</li>
+  </ul>
+
+  <p><strong>The options are shuffled every time a student sees a card.</strong>
+  The A–D letters here exist only so we can talk about them; no student sees
+  this order. Each option also has a permanent id (<code>opt-1</code> to
+  <code>opt-4</code>) that does not change when the order does, so please use the
+  id in any note about a specific option.</p>
+
+  <p>Two consequences of the shuffling, worth knowing if you rewrite an option:
+  an option must never refer to another by letter, and there is no "all of the
+  above" or "none of the above" — they depend on there being an above.</p>
+
+  <p>Sources are named, never numbered: no section numbers, ACS task codes, or
+  figure numbers anywhere. A student who repeats a stale code to a DPE pays for
+  our mistake.</p>
+
+  <table>
+    <thead>
+      <tr><th>Lesson</th><th class="num">Cards</th><th class="num">Values needed</th><th class="num">Our questions</th></tr>
+    </thead>
+    <tbody>
+          <tr>
+            <td>Stage 1, &quot;IMSAFE and PAVE — should we fly?&quot;</td>
+            <td class="num">9</td>
+            <td class="num">1</td>
+            <td class="num">2</td>
+          </tr>
+          <tr>
+            <td>Stage 1, &quot;Stalls, spins, and angle of attack&quot;</td>
+            <td class="num">9</td>
+            <td class="num">3</td>
+            <td class="num">2</td>
+          </tr>
+    </tbody>
+  </table>
+</section>
+
+
+    <section class="lesson">
+      <h2>Stage 1, &quot;IMSAFE and PAVE — should we fly?&quot;</h2>
+      <p class="lesson-meta">Lesson <code>s1-imsafe-pave</code> · 9 cards · every card below is a draft</p>
+
+      <section class="objective">
+        <h3>Apply the IMSAFE checklist to your own condition before a flight</h3>
+        <p class="objective-id">Objective <code>s1-imsafe-pave.imsafe-checklist</code> · 3 cards</p>
+
+      <article class="card">
+        <header class="card-head">
+          <span class="card-number">Card 1</span>
+          <h4>What IMSAFE is checking</h4>
+          <span class="card-id"><code>s1-imsafe-pave.imsafe-checklist.c1</code></span>
+        </header>
+
+        <p class="question">IMSAFE is a checklist you run on what?</p>
+
+        <ol class="options">
+          <li class="option">
+            <span class="letter">A</span>
+            <span class="option-text">The airplane's required equipment and paperwork</span>
+            <span class="option-id"><code>opt-1</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option correct">
+            <span class="letter">B</span>
+            <span class="option-text">Yourself — whether you are fit to fly today</span>
+            <span class="option-id"><code>opt-2</code></span>
+            <span class="mark">correct answer</span>
+          </li>
+          <li class="option">
+            <span class="letter">C</span>
+            <span class="option-text">The weather, the route, and the destination</span>
+            <span class="option-id"><code>opt-3</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option">
+            <span class="letter">D</span>
+            <span class="option-text">The maintenance items due before the next flight</span>
+            <span class="option-id"><code>opt-4</code></span>
+            <span class="mark"></span>
+          </li>
+        </ol>
+
+        <p class="explanation"><span class="label">Shown after answering:</span>
+          Everything else you check before a flight is about the airplane or the conditions. IMSAFE is the one that looks at the pilot: <strong>I</strong>llness, <strong>M</strong>edication, <strong>S</strong>tress, <strong>A</strong>lcohol, <strong>F</strong>atigue, <strong>E</strong>motion. You may hear an instructor give the E as Eating — that version comes from other aviation authorities and some training groups rather than the FAA, so it is worth knowing it exists, but Emotion is the one we teach. It is the first real pilot decision of the day, and the only one nobody else can make for you. Confirm in the Pilot's Handbook of Aeronautical Knowledge.</p>
+
+        <p class="visual"><span class="label">Picture we plan to draw:</span>
+          A split graphic. On the left, a preflight walkaround silhouette with a clipboard, labelled &quot;everything else you check.&quot; On the right, the same pilot standing still with a hand on their own chest, labelled &quot;IMSAFE.&quot; Six small tiles beneath the right-hand figure, one per letter, with the word spelled out. No airplane on the right-hand side at all — the absence is the point.</p>
+
+        <div class="review">
+          <p class="review-choices">
+            <span class="choice"><span class="box"></span>Approve as written</span>
+            <span class="choice"><span class="box"></span>Approve with the changes below</span>
+            <span class="choice"><span class="box"></span>Cut this card</span>
+          </p>
+          <p class="review-notes"><span class="label">Notes:</span></p>
+          <p class="rule"></p>
+          <p class="rule"></p>
+        </div>
+      </article>
+
+      <article class="card">
+        <header class="card-head">
+          <span class="card-number">Card 2</span>
+          <h4>The letter students most often miss</h4>
+          <span class="card-id"><code>s1-imsafe-pave.imsafe-checklist.c2</code></span>
+        </header>
+
+        <p class="question">In IMSAFE, what does the S stand for?</p>
+
+        <ol class="options">
+          <li class="option">
+            <span class="letter">A</span>
+            <span class="option-text">Sleep</span>
+            <span class="option-id"><code>opt-1</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option">
+            <span class="letter">B</span>
+            <span class="option-text">Situation</span>
+            <span class="option-id"><code>opt-2</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option">
+            <span class="letter">C</span>
+            <span class="option-text">Skill</span>
+            <span class="option-id"><code>opt-3</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option correct">
+            <span class="letter">D</span>
+            <span class="option-text">Stress</span>
+            <span class="option-id"><code>opt-4</code></span>
+            <span class="mark">correct answer</span>
+          </li>
+        </ol>
+
+        <p class="explanation"><span class="label">Shown after answering:</span>
+          Stress — money, school, family, a hard week — rides along in the cockpit whether or not you invite it, and it eats the attention you need for flying. Sleep is a genuinely easy one to land on, but sleep belongs to Fatigue, which has its own letter. Confirm in the Pilot's Handbook of Aeronautical Knowledge.</p>
+
+        <p class="visual"><span class="label">Picture we plan to draw:</span>
+          The six IMSAFE letters shown as a vertical column with each expansion written out, and the S row highlighted. Beside the S row, three small icons — a phone with unread messages, a bill, a clock showing a late hour — drawn small and ordinary rather than dramatic. Beside the F row, a separate icon of a bed, drawn to make the Sleep-versus-Stress distinction visible at a glance.</p>
+
+        <div class="review">
+          <p class="review-choices">
+            <span class="choice"><span class="box"></span>Approve as written</span>
+            <span class="choice"><span class="box"></span>Approve with the changes below</span>
+            <span class="choice"><span class="box"></span>Cut this card</span>
+          </p>
+          <p class="review-notes"><span class="label">Notes:</span></p>
+          <p class="rule"></p>
+          <p class="rule"></p>
+        </div>
+      </article>
+
+      <article class="card needs-answer">
+        <header class="card-head">
+          <span class="card-number">Card 3</span>
+          <h4>A head cold on lesson day</h4>
+          <span class="card-id"><code>s1-imsafe-pave.imsafe-checklist.c3</code></span>
+        </header>
+
+        <p class="question">You wake up with a heavy head cold on the morning of a lesson. What does IMSAFE ask you to weigh?</p>
+
+        <ol class="options">
+          <li class="option correct">
+            <span class="letter">A</span>
+            <span class="option-text">Illness is its own item, and a cold can affect your ears, your sinuses and your judgment</span>
+            <span class="option-id"><code>opt-1</code></span>
+            <span class="mark">correct answer</span>
+          </li>
+          <li class="option">
+            <span class="letter">B</span>
+            <span class="option-text">Only whether you have a fever — without one, a cold is not an IMSAFE item</span>
+            <span class="option-id"><code>opt-2</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option">
+            <span class="letter">C</span>
+            <span class="option-text">Nothing, as long as you take something for it before you go</span>
+            <span class="option-id"><code>opt-3</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option">
+            <span class="letter">D</span>
+            <span class="option-text">Only conditions your aviation medical examiner already knows about</span>
+            <span class="option-id"><code>opt-4</code></span>
+            <span class="mark"></span>
+          </li>
+        </ol>
+
+        <p class="explanation"><span class="label">Shown after answering:</span>
+          A cold is exactly what the I is for — blocked sinuses and ears hurt on the way down, and feeling rough dulls the judgment you are there to practise. Reaching for medication does not clear the checklist either; that is the M, and many over-the-counter remedies carry their own wait before flight — <mark class="gap">value needed</mark>. Confirm in the Pilot's Handbook of Aeronautical Knowledge.</p>
+
+        <p class="visual"><span class="label">Picture we plan to draw:</span>
+          A simple head-in-profile diagram showing the sinus cavities and the middle ear, with small pressure arrows on a descending flight path beside it. Underneath, two checklist rows side by side — Illness and Medication — with a line drawn between them and the caption &quot;treating one lands you in the other.&quot;</p>
+
+        <div class="review">
+          <p class="review-choices">
+            <span class="choice"><span class="box"></span>Approve as written</span>
+            <span class="choice"><span class="box"></span>Approve with the changes below</span>
+            <span class="choice"><span class="box"></span>Cut this card</span>
+          </p>
+          <p class="review-notes"><span class="label">Notes:</span></p>
+          <p class="rule"></p>
+          <p class="rule"></p>
+        </div>
+      </article>
+      </section>
+
+      <section class="objective">
+        <h3>Apply the PAVE checklist to pilot, aircraft, environment, and external pressure</h3>
+        <p class="objective-id">Objective <code>s1-imsafe-pave.pave-checklist</code> · 3 cards</p>
+
+      <article class="card">
+        <header class="card-head">
+          <span class="card-number">Card 4</span>
+          <h4>The four buckets</h4>
+          <span class="card-id"><code>s1-imsafe-pave.pave-checklist.c1</code></span>
+        </header>
+
+        <p class="question">PAVE sorts the risks of a flight into four areas. Which four?</p>
+
+        <ol class="options">
+          <li class="option">
+            <span class="letter">A</span>
+            <span class="option-text">Preflight, Airspace, Visibility, Emergency planning</span>
+            <span class="option-id"><code>opt-1</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option">
+            <span class="letter">B</span>
+            <span class="option-text">Planning, Aircraft, Weather, Experience</span>
+            <span class="option-id"><code>opt-2</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option correct">
+            <span class="letter">C</span>
+            <span class="option-text">Pilot, Aircraft, Environment, External pressures</span>
+            <span class="option-id"><code>opt-3</code></span>
+            <span class="mark">correct answer</span>
+          </li>
+          <li class="option">
+            <span class="letter">D</span>
+            <span class="option-text">Pilot, Altitude, Visibility, Equipment</span>
+            <span class="option-id"><code>opt-4</code></span>
+            <span class="mark"></span>
+          </li>
+        </ol>
+
+        <p class="explanation"><span class="label">Shown after answering:</span>
+          PAVE gives you four places to look so that a risk does not go unnoticed simply because you were thinking about something else. Pilot is you, Aircraft is the machine, Environment is the weather, terrain, airport and time of day, and External pressures are the reasons you feel you have to go. Confirm in the Pilot's Handbook of Aeronautical Knowledge.</p>
+
+        <p class="visual"><span class="label">Picture we plan to draw:</span>
+          Four quadrants of equal size, each labelled with its word and carrying one plain icon: a pilot's head and shoulders; a small trainer aircraft; a cloud over a ridgeline with a moon; and a phone showing a waiting message. Equal weight given to all four quadrants, with no arrows or ranking between them.</p>
+
+        <div class="review">
+          <p class="review-choices">
+            <span class="choice"><span class="box"></span>Approve as written</span>
+            <span class="choice"><span class="box"></span>Approve with the changes below</span>
+            <span class="choice"><span class="box"></span>Cut this card</span>
+          </p>
+          <p class="review-notes"><span class="label">Notes:</span></p>
+          <p class="rule"></p>
+          <p class="rule"></p>
+        </div>
+      </article>
+
+      <article class="card needs-answer">
+        <header class="card-head">
+          <span class="card-number">Card 5</span>
+          <h4>Friends waiting at the destination</h4>
+          <span class="card-id"><code>s1-imsafe-pave.pave-checklist.c2</code></span>
+        </header>
+
+        <p class="question">You told friends you would be on the ground by a certain time, and they are waiting for you there. Where does that belong in PAVE?</p>
+
+        <ol class="options">
+          <li class="option">
+            <span class="letter">A</span>
+            <span class="option-text">Pilot</span>
+            <span class="option-id"><code>opt-1</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option correct">
+            <span class="letter">B</span>
+            <span class="option-text">External pressures</span>
+            <span class="option-id"><code>opt-2</code></span>
+            <span class="mark">correct answer</span>
+          </li>
+          <li class="option">
+            <span class="letter">C</span>
+            <span class="option-text">Environment</span>
+            <span class="option-id"><code>opt-3</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option">
+            <span class="letter">D</span>
+            <span class="option-text">Aircraft</span>
+            <span class="option-id"><code>opt-4</code></span>
+            <span class="mark"></span>
+          </li>
+        </ol>
+
+        <p class="explanation"><span class="label">Shown after answering:</span>
+          A promise you have made to somebody else is a reason to keep going when you should turn back, and PAVE gives that its own letter precisely because it is so easy to miss — it is the only one of the four that is not about the flight at all. Recognising it is what stops it deciding for you. Confirm in the Pilot's Handbook of Aeronautical Knowledge.</p>
+
+        <p class="visual"><span class="label">Picture we plan to draw:</span>
+          A pilot in the cockpit at the top of the frame with a thought bubble containing a clock and two waiting figures. The four PAVE quadrants sit below, with a dotted line running from the thought bubble past the Pilot quadrant and into External pressures, captioned &quot;it feels like it is about you — it is not.&quot;</p>
+        <p class="flag"><span class="label">Our own doubt about this card:</span>
+          The Pilot and External-pressures boundary is genuinely arguable here, and a thoughtful student could defend the Pilot option: it is your feeling of obligation, and that feeling lives in you. We think the point of the E is that the pressure originates outside you, and that filing it under Pilot is how it gets lost. Please tell us whether that distinction is the one you teach, and whether this card sharpens it or muddies it.</p>
+
+        <div class="review">
+          <p class="review-choices">
+            <span class="choice"><span class="box"></span>Approve as written</span>
+            <span class="choice"><span class="box"></span>Approve with the changes below</span>
+            <span class="choice"><span class="box"></span>Cut this card</span>
+          </p>
+          <p class="review-notes"><span class="label">Notes:</span></p>
+          <p class="rule"></p>
+          <p class="rule"></p>
+        </div>
+      </article>
+
+      <article class="card needs-answer">
+        <header class="card-head">
+          <span class="card-number">Card 6</span>
+          <h4>Night, terrain, unfamiliar field</h4>
+          <span class="card-id"><code>s1-imsafe-pave.pave-checklist.c3</code></span>
+        </header>
+
+        <p class="question">The flight is at night, into an airport with rising ground nearby. Which PAVE area covers the darkness and the terrain?</p>
+
+        <ol class="options">
+          <li class="option correct">
+            <span class="letter">A</span>
+            <span class="option-text">Environment</span>
+            <span class="option-id"><code>opt-1</code></span>
+            <span class="mark">correct answer</span>
+          </li>
+          <li class="option">
+            <span class="letter">B</span>
+            <span class="option-text">Pilot</span>
+            <span class="option-id"><code>opt-2</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option">
+            <span class="letter">C</span>
+            <span class="option-text">External pressures</span>
+            <span class="option-id"><code>opt-3</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option">
+            <span class="letter">D</span>
+            <span class="option-text">Aircraft</span>
+            <span class="option-id"><code>opt-4</code></span>
+            <span class="mark"></span>
+          </li>
+        </ol>
+
+        <p class="explanation"><span class="label">Shown after answering:</span>
+          Environment is everything the flight happens in rather than everything you bring to it — weather, terrain, the airport itself, and the time of day. Darkness and rising ground are both squarely in that bucket. Confirm in the Pilot's Handbook of Aeronautical Knowledge and the Aeronautical Information Manual.</p>
+
+        <p class="visual"><span class="label">Picture we plan to draw:</span>
+          A night approach drawn in profile: an airplane on a descending path, a ridgeline rising beneath and ahead of it, an airport beacon on the far side of the ridge. Along the bottom, the four PAVE labels with Environment highlighted. The pilot figure is drawn outside the scene, off to one side, to keep the two ideas visually separate.</p>
+        <p class="flag"><span class="label">Our own doubt about this card:</span>
+          We deliberately kept the wording to the darkness and the terrain, because &quot;an unfamiliar airport&quot; would have straddled two buckets — the field is Environment, but *your* lack of familiarity with it is Pilot. That overlap is real and arguably the more useful thing to teach. Please say whether to keep this card narrow as written, or to rewrite it to make the overlap the whole point.</p>
+
+        <div class="review">
+          <p class="review-choices">
+            <span class="choice"><span class="box"></span>Approve as written</span>
+            <span class="choice"><span class="box"></span>Approve with the changes below</span>
+            <span class="choice"><span class="box"></span>Cut this card</span>
+          </p>
+          <p class="review-notes"><span class="label">Notes:</span></p>
+          <p class="rule"></p>
+          <p class="rule"></p>
+        </div>
+      </article>
+      </section>
+
+      <section class="objective">
+        <h3>Describe the hazardous attitudes and their antidotes</h3>
+        <p class="objective-id">Objective <code>s1-imsafe-pave.hazardous-attitudes</code> · 3 cards</p>
+
+      <article class="card">
+        <header class="card-head">
+          <span class="card-number">Card 7</span>
+          <h4>Naming the attitude</h4>
+          <span class="card-id"><code>s1-imsafe-pave.hazardous-attitudes.c1</code></span>
+        </header>
+
+        <p class="question">&quot;Those rules are for people who do not really know what they are doing.&quot; Which hazardous attitude is that?</p>
+
+        <ol class="options">
+          <li class="option">
+            <span class="letter">A</span>
+            <span class="option-text">Impulsivity</span>
+            <span class="option-id"><code>opt-1</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option">
+            <span class="letter">B</span>
+            <span class="option-text">Invulnerability</span>
+            <span class="option-id"><code>opt-2</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option">
+            <span class="letter">C</span>
+            <span class="option-text">Macho</span>
+            <span class="option-id"><code>opt-3</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option correct">
+            <span class="letter">D</span>
+            <span class="option-text">Anti-authority</span>
+            <span class="option-id"><code>opt-4</code></span>
+            <span class="mark">correct answer</span>
+          </li>
+        </ol>
+
+        <p class="explanation"><span class="label">Shown after answering:</span>
+          Anti-authority is the attitude that the rules are somebody else's problem. It is worth separating from Macho, which is about proving something, and from Invulnerability, which is about believing the bad outcome happens to other people. They can appear together in the same sentence, which is why naming them matters. Confirm in the Pilot's Handbook of Aeronautical Knowledge.</p>
+
+        <p class="visual"><span class="label">Picture we plan to draw:</span>
+          A regulation page or a placarded limitation shown at an angle, with a hand pushing it aside. Beside it, the five attitude names listed plainly, with Anti-authority marked. No caricature of a pilot — the point is that this is a thought, not a personality.</p>
+
+        <div class="review">
+          <p class="review-choices">
+            <span class="choice"><span class="box"></span>Approve as written</span>
+            <span class="choice"><span class="box"></span>Approve with the changes below</span>
+            <span class="choice"><span class="box"></span>Cut this card</span>
+          </p>
+          <p class="review-notes"><span class="label">Notes:</span></p>
+          <p class="rule"></p>
+          <p class="rule"></p>
+        </div>
+      </article>
+
+      <article class="card">
+        <header class="card-head">
+          <span class="card-number">Card 8</span>
+          <h4>Matching the antidote</h4>
+          <span class="card-id"><code>s1-imsafe-pave.hazardous-attitudes.c2</code></span>
+        </header>
+
+        <p class="question">Which thought is the antidote to Invulnerability?</p>
+
+        <ol class="options">
+          <li class="option">
+            <span class="letter">A</span>
+            <span class="option-text">&quot;Taking chances is foolish.&quot;</span>
+            <span class="option-id"><code>opt-1</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option">
+            <span class="letter">B</span>
+            <span class="option-text">&quot;Not so fast. Think first.&quot;</span>
+            <span class="option-id"><code>opt-2</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option correct">
+            <span class="letter">C</span>
+            <span class="option-text">&quot;It could happen to me.&quot;</span>
+            <span class="option-id"><code>opt-3</code></span>
+            <span class="mark">correct answer</span>
+          </li>
+          <li class="option">
+            <span class="letter">D</span>
+            <span class="option-text">&quot;I am not helpless. I can make a difference.&quot;</span>
+            <span class="option-id"><code>opt-4</code></span>
+            <span class="mark"></span>
+          </li>
+        </ol>
+
+        <p class="explanation"><span class="label">Shown after answering:</span>
+          Invulnerability is the belief that accidents happen to other people, so its antidote is the sentence that puts you back in the picture. Every option here is a real antidote to one of the five attitudes, which is the point — knowing the list is not the same as matching it. Confirm in the Pilot's Handbook of Aeronautical Knowledge.</p>
+
+        <p class="visual"><span class="label">Picture we plan to draw:</span>
+          Five rows, each pairing an attitude with its antidote, laid out as a simple matching table with the Invulnerability row highlighted. The other four rows stay fully legible rather than greyed out, so the card teaches the whole set even while asking about one.</p>
+
+        <div class="review">
+          <p class="review-choices">
+            <span class="choice"><span class="box"></span>Approve as written</span>
+            <span class="choice"><span class="box"></span>Approve with the changes below</span>
+            <span class="choice"><span class="box"></span>Cut this card</span>
+          </p>
+          <p class="review-notes"><span class="label">Notes:</span></p>
+          <p class="rule"></p>
+          <p class="rule"></p>
+        </div>
+      </article>
+
+      <article class="card">
+        <header class="card-head">
+          <span class="card-number">Card 9</span>
+          <h4>The quiet one</h4>
+          <span class="card-id"><code>s1-imsafe-pave.hazardous-attitudes.c3</code></span>
+        </header>
+
+        <p class="question">&quot;There is nothing I can do about it. Whatever happens, happens.&quot; Which hazardous attitude is that?</p>
+
+        <ol class="options">
+          <li class="option correct">
+            <span class="letter">A</span>
+            <span class="option-text">Resignation</span>
+            <span class="option-id"><code>opt-1</code></span>
+            <span class="mark">correct answer</span>
+          </li>
+          <li class="option">
+            <span class="letter">B</span>
+            <span class="option-text">Impulsivity</span>
+            <span class="option-id"><code>opt-2</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option">
+            <span class="letter">C</span>
+            <span class="option-text">Anti-authority</span>
+            <span class="option-id"><code>opt-3</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option">
+            <span class="letter">D</span>
+            <span class="option-text">Macho</span>
+            <span class="option-id"><code>opt-4</code></span>
+            <span class="mark"></span>
+          </li>
+        </ol>
+
+        <p class="explanation"><span class="label">Shown after answering:</span>
+          Resignation is the one that does not look like a hazardous attitude, because it sounds like modesty rather than risk-taking. It shows up as a pilot who stops trying to influence the outcome — one who sees an approach going wrong, decides it is out of their hands now, and rides it down instead of going around. Confirm in the Pilot's Handbook of Aeronautical Knowledge.</p>
+
+        <p class="visual"><span class="label">Picture we plan to draw:</span>
+          A pair of hands coming off a control yoke, palms open. Beside it, an altimeter or a fuel gauge drawn mid-problem and unattended. Deliberately understated — no alarm colouring — because the card is about an attitude that does not announce itself.</p>
+
+        <div class="review">
+          <p class="review-choices">
+            <span class="choice"><span class="box"></span>Approve as written</span>
+            <span class="choice"><span class="box"></span>Approve with the changes below</span>
+            <span class="choice"><span class="box"></span>Cut this card</span>
+          </p>
+          <p class="review-notes"><span class="label">Notes:</span></p>
+          <p class="rule"></p>
+          <p class="rule"></p>
+        </div>
+      </article>
+      </section>
+    </section>
+
+    <section class="lesson">
+      <h2>Stage 1, &quot;Stalls, spins, and angle of attack&quot;</h2>
+      <p class="lesson-meta">Lesson <code>s1-stalls</code> · 9 cards · every card below is a draft</p>
+
+      <section class="objective">
+        <h3>Explain why a wing can stall at any airspeed and any attitude</h3>
+        <p class="objective-id">Objective <code>s1-stalls.stall-any-airspeed</code> · 3 cards</p>
+
+      <article class="card">
+        <header class="card-head">
+          <span class="card-number">Card 10</span>
+          <h4>What actually causes a stall</h4>
+          <span class="card-id"><code>s1-stalls.stall-any-airspeed.c1</code></span>
+        </header>
+
+        <p class="question">What makes a wing stall?</p>
+
+        <ol class="options">
+          <li class="option correct">
+            <span class="letter">A</span>
+            <span class="option-text">The wing passes its critical angle of attack</span>
+            <span class="option-id"><code>opt-2</code></span>
+            <span class="mark">correct answer</span>
+          </li>
+          <li class="option">
+            <span class="letter">B</span>
+            <span class="option-text">The airplane slows below a fixed speed printed in the handbook</span>
+            <span class="option-id"><code>opt-1</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option">
+            <span class="letter">C</span>
+            <span class="option-text">The engine loses power</span>
+            <span class="option-id"><code>opt-3</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option">
+            <span class="letter">D</span>
+            <span class="option-text">The nose is pointed too far above the horizon</span>
+            <span class="option-id"><code>opt-4</code></span>
+            <span class="mark"></span>
+          </li>
+        </ol>
+
+        <p class="explanation"><span class="label">Shown after answering:</span>
+          A stall is about the angle between the wing and the air coming at it — the <strong>angle of attack</strong> — not about speed. Past a certain angle, called the <strong>critical angle of attack</strong>, the air stops following the top of the wing and lift falls off. Confirm in the Pilot's Handbook of Aeronautical Knowledge and the Airplane Flying Handbook.</p>
+
+        <p class="visual"><span class="label">Picture we plan to draw:</span>
+          Side view of a wing with the relative wind drawn as arrows coming from ahead. A shaded angle between the wing's chord line and that relative wind, labelled &quot;angle of attack.&quot; Three frames: small angle with smooth attached airflow; larger angle, still attached; past the critical angle, with the airflow over the top breaking away into turbulent swirls. The airspeed reading stays identical in all three frames, to make the point that speed did not change anything.</p>
+
+        <div class="review">
+          <p class="review-choices">
+            <span class="choice"><span class="box"></span>Approve as written</span>
+            <span class="choice"><span class="box"></span>Approve with the changes below</span>
+            <span class="choice"><span class="box"></span>Cut this card</span>
+          </p>
+          <p class="review-notes"><span class="label">Notes:</span></p>
+          <p class="rule"></p>
+          <p class="rule"></p>
+        </div>
+      </article>
+
+      <article class="card needs-answer">
+        <header class="card-head">
+          <span class="card-number">Card 11</span>
+          <h4>Stalling fast</h4>
+          <span class="card-id"><code>s1-stalls.stall-any-airspeed.c2</code></span>
+        </header>
+
+        <p class="question">You are in a steep turn, well above the speed you normally see a stall happen at. Can the wing stall?</p>
+
+        <ol class="options">
+          <li class="option">
+            <span class="letter">A</span>
+            <span class="option-text">No — a stall only happens near the published stall speed</span>
+            <span class="option-id"><code>opt-1</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option">
+            <span class="letter">B</span>
+            <span class="option-text">No — a stall only happens with the nose high</span>
+            <span class="option-id"><code>opt-2</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option correct">
+            <span class="letter">C</span>
+            <span class="option-text">Yes — if the wing reaches its critical angle of attack, it stalls whatever the airspeed says</span>
+            <span class="option-id"><code>opt-3</code></span>
+            <span class="mark">correct answer</span>
+          </li>
+          <li class="option">
+            <span class="letter">D</span>
+            <span class="option-text">Yes — but only with the engine at idle</span>
+            <span class="option-id"><code>opt-4</code></span>
+            <span class="mark"></span>
+          </li>
+        </ol>
+
+        <p class="explanation"><span class="label">Shown after answering:</span>
+          Pulling back harder raises the angle of attack, and the wing does not care how fast it is going when it gets there. This is an <strong>accelerated stall</strong>. The speed at which it happens climbs as you pull harder — in a steep turn, by roughly <mark class="gap">value needed</mark>. Confirm in the Pilot's Handbook of Aeronautical Knowledge and the Airplane Flying Handbook.</p>
+
+        <p class="visual"><span class="label">Picture we plan to draw:</span>
+          Split screen. Left, an airplane in level flight, wings level, angle-of-attack gauge low, airspeed needle mid-range. Right, the same airplane in a steep banked turn, airspeed needle in the same place, angle-of-attack gauge swung up into a red band. One line of text between them: &quot;Same speed. Different angle.&quot;</p>
+
+        <div class="review">
+          <p class="review-choices">
+            <span class="choice"><span class="box"></span>Approve as written</span>
+            <span class="choice"><span class="box"></span>Approve with the changes below</span>
+            <span class="choice"><span class="box"></span>Cut this card</span>
+          </p>
+          <p class="review-notes"><span class="label">Notes:</span></p>
+          <p class="rule"></p>
+          <p class="rule"></p>
+        </div>
+      </article>
+
+      <article class="card">
+        <header class="card-head">
+          <span class="card-number">Card 12</span>
+          <h4>Stalling with the nose down</h4>
+          <span class="card-id"><code>s1-stalls.stall-any-airspeed.c3</code></span>
+        </header>
+
+        <p class="question">Can a wing stall while the nose is pointed below the horizon?</p>
+
+        <ol class="options">
+          <li class="option">
+            <span class="letter">A</span>
+            <span class="option-text">No — a nose-low attitude always means the wing is flying</span>
+            <span class="option-id"><code>opt-1</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option">
+            <span class="letter">B</span>
+            <span class="option-text">No — the airflow keeps the wing unstalled in a descent</span>
+            <span class="option-id"><code>opt-3</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option">
+            <span class="letter">C</span>
+            <span class="option-text">Yes — but only with the flaps down</span>
+            <span class="option-id"><code>opt-4</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option correct">
+            <span class="letter">D</span>
+            <span class="option-text">Yes — if the pilot pulls hard enough to pass the critical angle of attack</span>
+            <span class="option-id"><code>opt-2</code></span>
+            <span class="mark">correct answer</span>
+          </li>
+        </ol>
+
+        <p class="explanation"><span class="label">Shown after answering:</span>
+          Attitude is where the nose is pointing; angle of attack is how the wing meets the air. They are not the same thing, and a hard pull during a descent or a dive recovery can stall the wing with the nose well below the horizon. Confirm in the Pilot's Handbook of Aeronautical Knowledge and the Airplane Flying Handbook.</p>
+
+        <p class="visual"><span class="label">Picture we plan to draw:</span>
+          An airplane in a descent, nose clearly below the horizon line. Two arrows from the wing: one showing where the nose points, one showing the relative wind coming up from below and ahead. The angle between the wing and that relative wind is shaded and large. A caption points out that the horizon tells you attitude, not angle of attack.</p>
+
+        <div class="review">
+          <p class="review-choices">
+            <span class="choice"><span class="box"></span>Approve as written</span>
+            <span class="choice"><span class="box"></span>Approve with the changes below</span>
+            <span class="choice"><span class="box"></span>Cut this card</span>
+          </p>
+          <p class="review-notes"><span class="label">Notes:</span></p>
+          <p class="rule"></p>
+          <p class="rule"></p>
+        </div>
+      </article>
+      </section>
+
+      <section class="objective">
+        <h3>Describe the indications that precede a stall</h3>
+        <p class="objective-id">Objective <code>s1-stalls.stall-warning-signs</code> · 3 cards</p>
+
+      <article class="card">
+        <header class="card-head">
+          <span class="card-number">Card 13</span>
+          <h4>What it feels like first</h4>
+          <span class="card-id"><code>s1-stalls.stall-warning-signs.c1</code></span>
+        </header>
+
+        <p class="question">Which of these usually shows up as you approach a stall?</p>
+
+        <ol class="options">
+          <li class="option">
+            <span class="letter">A</span>
+            <span class="option-text">The airspeed suddenly increases</span>
+            <span class="option-id"><code>opt-1</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option correct">
+            <span class="letter">B</span>
+            <span class="option-text">The controls feel mushy and answer more slowly</span>
+            <span class="option-id"><code>opt-2</code></span>
+            <span class="mark">correct answer</span>
+          </li>
+          <li class="option">
+            <span class="letter">C</span>
+            <span class="option-text">The engine begins running rough</span>
+            <span class="option-id"><code>opt-3</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option">
+            <span class="letter">D</span>
+            <span class="option-text">The controls become stiffer and heavier</span>
+            <span class="option-id"><code>opt-4</code></span>
+            <span class="mark"></span>
+          </li>
+        </ol>
+
+        <p class="explanation"><span class="label">Shown after answering:</span>
+          With less airflow over the control surfaces, the controls go soft and sloppy before the wing quits — often along with a shudder through the airframe, called <strong>buffet</strong>. The engine-roughness option is a different thing entirely: an engine problem is not an aerodynamic stall. Confirm in the Pilot's Handbook of Aeronautical Knowledge and the Airplane Flying Handbook.</p>
+
+        <p class="visual"><span class="label">Picture we plan to draw:</span>
+          A short looping animation of a control yoke being moved side to side, with the airplane's response drawn as a lagging, sluggish wing dip. Beside it, a simple &quot;feel&quot; meter sliding from &quot;crisp&quot; toward &quot;mushy.&quot; Faint vibration lines around the airframe to suggest buffet. No numbers on screen.</p>
+
+        <div class="review">
+          <p class="review-choices">
+            <span class="choice"><span class="box"></span>Approve as written</span>
+            <span class="choice"><span class="box"></span>Approve with the changes below</span>
+            <span class="choice"><span class="box"></span>Cut this card</span>
+          </p>
+          <p class="review-notes"><span class="label">Notes:</span></p>
+          <p class="rule"></p>
+          <p class="rule"></p>
+        </div>
+      </article>
+
+      <article class="card needs-answer">
+        <header class="card-head">
+          <span class="card-number">Card 14</span>
+          <h4>What the stall warning is telling you</h4>
+          <span class="card-id"><code>s1-stalls.stall-warning-signs.c2</code></span>
+        </header>
+
+        <p class="question">The stall warning goes off. What does that mean?</p>
+
+        <ol class="options">
+          <li class="option">
+            <span class="letter">A</span>
+            <span class="option-text">The wing is already stalled</span>
+            <span class="option-id"><code>opt-1</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option">
+            <span class="letter">B</span>
+            <span class="option-text">Your airspeed has dropped below the white arc</span>
+            <span class="option-id"><code>opt-3</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option correct">
+            <span class="letter">C</span>
+            <span class="option-text">You are approaching the critical angle of attack, with some margin left before the stall</span>
+            <span class="option-id"><code>opt-2</code></span>
+            <span class="mark">correct answer</span>
+          </li>
+          <li class="option">
+            <span class="letter">D</span>
+            <span class="option-text">The airplane has entered a spin</span>
+            <span class="option-id"><code>opt-4</code></span>
+            <span class="mark"></span>
+          </li>
+        </ol>
+
+        <p class="explanation"><span class="label">Shown after answering:</span>
+          The stall warning is an early warning, not a report of something that already happened — it triggers before the wing stalls, giving you room to act. How much room varies by aircraft: <mark class="gap">value needed</mark>. Confirm in the Pilot's Handbook of Aeronautical Knowledge, and in the POH or AFM for the specific airplane.</p>
+
+        <p class="visual"><span class="label">Picture we plan to draw:</span>
+          A single sliding scale, left to right: &quot;flying normally&quot; → &quot;stall warning&quot; → &quot;critical angle of attack&quot; → &quot;stalled.&quot; A marker sits on the stall-warning band, with the gap between it and &quot;stalled&quot; shaded and labelled &quot;your margin — varies by airplane.&quot; The gap is drawn without a number on it.</p>
+
+        <div class="review">
+          <p class="review-choices">
+            <span class="choice"><span class="box"></span>Approve as written</span>
+            <span class="choice"><span class="box"></span>Approve with the changes below</span>
+            <span class="choice"><span class="box"></span>Cut this card</span>
+          </p>
+          <p class="review-notes"><span class="label">Notes:</span></p>
+          <p class="rule"></p>
+          <p class="rule"></p>
+        </div>
+      </article>
+
+      <article class="card needs-answer">
+        <header class="card-head">
+          <span class="card-number">Card 15</span>
+          <h4>Can the airspeed indicator keep you safe</h4>
+          <span class="card-id"><code>s1-stalls.stall-warning-signs.c3</code></span>
+        </header>
+
+        <p class="question">The airspeed indicator shows a comfortable number. Does that guarantee the wing is not about to stall?</p>
+
+        <ol class="options">
+          <li class="option correct">
+            <span class="letter">A</span>
+            <span class="option-text">No — the wing stalls at an angle, and the speed that happens at changes with how hard you are maneuvering</span>
+            <span class="option-id"><code>opt-2</code></span>
+            <span class="mark">correct answer</span>
+          </li>
+          <li class="option">
+            <span class="letter">B</span>
+            <span class="option-text">Yes — above the stall range on the dial, you are safe</span>
+            <span class="option-id"><code>opt-1</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option">
+            <span class="letter">C</span>
+            <span class="option-text">Yes — provided the flaps are up</span>
+            <span class="option-id"><code>opt-3</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option">
+            <span class="letter">D</span>
+            <span class="option-text">No — because the airspeed indicator is usually inaccurate</span>
+            <span class="option-id"><code>opt-4</code></span>
+            <span class="mark"></span>
+          </li>
+        </ol>
+
+        <p class="explanation"><span class="label">Shown after answering:</span>
+          The marked stall range on the dial assumes a particular set of conditions. Load the wing up in a turn or a pull-up and the wing can stall at a higher indicated speed. The instrument is not lying to you — it is answering a different question than the one that matters. Confirm in the Pilot's Handbook of Aeronautical Knowledge.</p>
+
+        <p class="visual"><span class="label">Picture we plan to draw:</span>
+          An airspeed indicator with the needle steady in the green. Over it, a ghosted second marking showing the stall point shifting upward as a small bank-angle dial beside it increases. The needle never moves; the stall point slides up to meet it.</p>
+        <p class="flag"><span class="label">Our own doubt about this card:</span>
+          This card overlaps Card 2 — both make the point that speed does not determine the stall. It may be worth keeping only one. It is also the card most likely to leave a student distrusting their airspeed indicator generally, which is not the lesson. Please say whether the wording draws that line clearly enough, or whether to cut it.</p>
+
+        <div class="review">
+          <p class="review-choices">
+            <span class="choice"><span class="box"></span>Approve as written</span>
+            <span class="choice"><span class="box"></span>Approve with the changes below</span>
+            <span class="choice"><span class="box"></span>Cut this card</span>
+          </p>
+          <p class="review-notes"><span class="label">Notes:</span></p>
+          <p class="rule"></p>
+          <p class="rule"></p>
+        </div>
+      </article>
+      </section>
+
+      <section class="objective">
+        <h3>Describe the general stall recovery procedure and why spin awareness matters</h3>
+        <p class="objective-id">Objective <code>s1-stalls.stall-recovery-spins</code> · 3 cards</p>
+
+      <article class="card">
+        <header class="card-head">
+          <span class="card-number">Card 16</span>
+          <h4>The first move</h4>
+          <span class="card-id"><code>s1-stalls.stall-recovery-spins.c1</code></span>
+        </header>
+
+        <p class="question">What is the first thing you do to recover from a stall?</p>
+
+        <ol class="options">
+          <li class="option">
+            <span class="letter">A</span>
+            <span class="option-text">Add full power</span>
+            <span class="option-id"><code>opt-1</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option">
+            <span class="letter">B</span>
+            <span class="option-text">Level the wings with aileron</span>
+            <span class="option-id"><code>opt-3</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option">
+            <span class="letter">C</span>
+            <span class="option-text">Pull back to stop the airplane descending</span>
+            <span class="option-id"><code>opt-4</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option correct">
+            <span class="letter">D</span>
+            <span class="option-text">Reduce the angle of attack — release the back pressure and lower the nose</span>
+            <span class="option-id"><code>opt-2</code></span>
+            <span class="mark">correct answer</span>
+          </li>
+        </ol>
+
+        <p class="explanation"><span class="label">Shown after answering:</span>
+          Only reducing the angle of attack makes the wing fly again — everything else comes after. The pull-back-to-stop-the-descent option is the instinct that gets people hurt: pulling harder is exactly what deepens a stall. Power and wings-level follow, in the order your airplane's procedure gives. Confirm in the Airplane Flying Handbook, and follow the POH or AFM for your airplane.</p>
+
+        <p class="visual"><span class="label">Picture we plan to draw:</span>
+          Three panels. First, the wing past its critical angle with separated airflow and a downward arrow. Second, the control column moving forward and the angle of attack visibly shrinking, airflow reattaching. Third, the airplane flying again with the nose coming back up. A caption under panel two: &quot;This is the step that ends the stall.&quot;</p>
+
+        <div class="review">
+          <p class="review-choices">
+            <span class="choice"><span class="box"></span>Approve as written</span>
+            <span class="choice"><span class="box"></span>Approve with the changes below</span>
+            <span class="choice"><span class="box"></span>Cut this card</span>
+          </p>
+          <p class="review-notes"><span class="label">Notes:</span></p>
+          <p class="rule"></p>
+          <p class="rule"></p>
+        </div>
+      </article>
+
+      <article class="card">
+        <header class="card-head">
+          <span class="card-number">Card 17</span>
+          <h4>What turns a stall into a spin</h4>
+          <span class="card-id"><code>s1-stalls.stall-recovery-spins.c2</code></span>
+        </header>
+
+        <p class="question">What has to be happening for a stall to develop into a spin?</p>
+
+        <ol class="options">
+          <li class="option">
+            <span class="letter">A</span>
+            <span class="option-text">A steep bank angle</span>
+            <span class="option-id"><code>opt-1</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option correct">
+            <span class="letter">B</span>
+            <span class="option-text">Yaw while the wing is stalled</span>
+            <span class="option-id"><code>opt-2</code></span>
+            <span class="mark">correct answer</span>
+          </li>
+          <li class="option">
+            <span class="letter">C</span>
+            <span class="option-text">Full flaps</span>
+            <span class="option-id"><code>opt-3</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option">
+            <span class="letter">D</span>
+            <span class="option-text">An engine failure</span>
+            <span class="option-id"><code>opt-4</code></span>
+            <span class="mark"></span>
+          </li>
+        </ol>
+
+        <p class="explanation"><span class="label">Shown after answering:</span>
+          A spin needs two ingredients at once: a stalled wing, and yaw. One wing is more stalled than the other, and the airplane rolls and rotates — this is why coordinated flight matters so much near the stall. Bank angle alone does not cause it. Confirm in the Pilot's Handbook of Aeronautical Knowledge and the Airplane Flying Handbook.</p>
+
+        <p class="visual"><span class="label">Picture we plan to draw:</span>
+          Two-ingredient graphic: one icon of a stalled wing, one icon of a yaw arrow around the vertical axis, joined by a plus sign, equalling a small rotating-airplane icon. Beside it, a rudder pedal and a slip-skid ball centred, captioned &quot;keeping the ball centred is what keeps the second ingredient out.&quot;</p>
+
+        <div class="review">
+          <p class="review-choices">
+            <span class="choice"><span class="box"></span>Approve as written</span>
+            <span class="choice"><span class="box"></span>Approve with the changes below</span>
+            <span class="choice"><span class="box"></span>Cut this card</span>
+          </p>
+          <p class="review-notes"><span class="label">Notes:</span></p>
+          <p class="rule"></p>
+          <p class="rule"></p>
+        </div>
+      </article>
+
+      <article class="card needs-answer">
+        <header class="card-head">
+          <span class="card-number">Card 18</span>
+          <h4>Why spins matter most low down</h4>
+          <span class="card-id"><code>s1-stalls.stall-recovery-spins.c3</code></span>
+        </header>
+
+        <p class="question">Why is a spin most dangerous close to the ground?</p>
+
+        <ol class="options">
+          <li class="option">
+            <span class="letter">A</span>
+            <span class="option-text">The air is denser near the ground, so the spin turns faster</span>
+            <span class="option-id"><code>opt-1</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option">
+            <span class="letter">B</span>
+            <span class="option-text">A spin cannot be recovered from at all</span>
+            <span class="option-id"><code>opt-3</code></span>
+            <span class="mark"></span>
+          </li>
+          <li class="option correct">
+            <span class="letter">C</span>
+            <span class="option-text">Recovery costs altitude, and close to the ground there may not be enough left</span>
+            <span class="option-id"><code>opt-2</code></span>
+            <span class="mark">correct answer</span>
+          </li>
+          <li class="option">
+            <span class="letter">D</span>
+            <span class="option-text">The engine is more likely to stop in a spin</span>
+            <span class="option-id"><code>opt-4</code></span>
+            <span class="mark"></span>
+          </li>
+        </ol>
+
+        <p class="explanation"><span class="label">Shown after answering:</span>
+          Recovering costs height, and how much depends on the airplane and on how far the spin has developed: <mark class="gap">value needed</mark>. That is the whole reason the traffic pattern is where stall and spin awareness matters most. Confirm in the Airplane Flying Handbook, and in the POH or AFM for the specific airplane.</p>
+
+        <p class="visual"><span class="label">Picture we plan to draw:</span>
+          A side-on altitude ribbon with an airplane entering a spin near the top and the recovery drawn as a shaded band of height consumed before level flight. The same band is then shown overlaid at traffic-pattern height, where it reaches the ground. The band is shaded without a figure printed on it.</p>
+        <p class="flag"><span class="label">Our own doubt about this card:</span>
+          Two questions on this one. First, scope: the objective asks for spin <strong>awareness</strong>, and this card stays there deliberately — no recovery steps, no mnemonic. Please confirm that is the right line for a Private Pilot student at the knowledge stage, and that nothing here reads as instruction in how to recover from a spin. Second, the card touches on why the pattern is the high-risk place without teaching the pattern itself, which the student does not reach until a later lesson. Tell us if that is out of order.</p>
+
+        <div class="review">
+          <p class="review-choices">
+            <span class="choice"><span class="box"></span>Approve as written</span>
+            <span class="choice"><span class="box"></span>Approve with the changes below</span>
+            <span class="choice"><span class="box"></span>Cut this card</span>
+          </p>
+          <p class="review-notes"><span class="label">Notes:</span></p>
+          <p class="rule"></p>
+          <p class="rule"></p>
+        </div>
+      </article>
+      </section>
+    </section>
+
+<section class="signoff">
+  <h2 style="margin-top:.25rem">Reviewer sign-off</h2>
+  <p>Your name goes on record against every card you approve, with the date. We
+  record the approval per card, so approving some and cutting others is a normal
+  outcome — and no card without your approval is ever shown to a student.</p>
+  <p class="review-notes"><span class="label">Name</span></p>
+  <p class="rule"></p>
+  <p class="review-notes"><span class="label">Certificate number and type (CFI / CFII / MEI)</span></p>
+  <p class="rule"></p>
+  <p class="review-notes"><span class="label">Date</span></p>
+  <p class="rule"></p>
+  <p class="review-notes"><span class="label">Anything you want said to the students about these cards</span></p>
+  <p class="rule"></p>
+  <p class="rule"></p>
+</section>
+
+<footer>
+  <p>Generated from the reviewed card documents. Questions to Demetrius D. Harris,
+  PilotPathway.ai.</p>
+</footer>
+
+</body>
+</html>

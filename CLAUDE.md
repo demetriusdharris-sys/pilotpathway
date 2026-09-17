@@ -291,6 +291,7 @@ Closes the guardian consent gap: the old `consent` INSERT policy let any authent
 - **Cards removed from the markdown are retired, not deleted.**
 - **Options are shuffled on the server, once per render.** The order is passed to the client as data. Shuffling inside a client component would produce different orders on the server and client passes — a hydration mismatch.
 - **Grading re-checks that the card is still approved.** A card withdrawn between page load and answer is not scored.
+- **The CFI review packet is generated, never written by hand.** `node scripts/build-review-packet.mjs` turns the same card documents into `docs/cards/review-packet.html` — one self-contained printable page with every card, its correct answer, its explanation, the planned picture, a tick-box review line per card, and a sign-off block. `scripts/lib/cards.mjs` is the single parser behind both it and the sync migration, so the page a CFI signs and the rows a student sees cannot drift apart. Regenerate both after editing any card document. The packet marks `[CFI: confirm value]` as "value needed" and prints each `FLAG FOR CFI` beside its card, so nothing we owe an answer on can be skimmed past. Approval still happens by hand in SQL — nothing in the packet writes to the database.
 - **Card authoring follows `docs/cards/AUTHORING-RULES.md`.** Eight rules, including: options are shuffled so nothing refers to another by letter; no numbers unless settled across all trainers; sources named, never numbered; never frame a student's doubt about belonging as a defect.
 
 ---
