@@ -2,7 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getSupabaseEnv } from "@/lib/supabase/env";
-import { getProgress, summarize } from "@/lib/progress";
+import { getProgress, summarize, type ProgressBySlug } from "@/lib/progress";
+import type { Stage } from "@/lib/curriculum";
 import { loadCurriculum } from "@/lib/curriculum-store";
 import { SignOutButton } from "@/components/sign-out-button";
 import { LessonRow } from "@/components/lesson-row";
@@ -49,18 +50,17 @@ export default async function DashboardPage() {
     !profileResult.error &&
     typeof profileResult.data?.date_of_birth !== "string";
 
-  const stageOne = stages[0];
-
   // No stages means the curriculum could not be read. Fail loudly rather than
   // render an empty dashboard that looks like there is nothing to learn.
-  if (!stageOne) {
+  if (stages.length === 0) {
     throw new Error("The curriculum could not be loaded.");
   }
 
-  const stats = summarize(
-    stageOne.lessons.map((lesson) => lesson.slug),
-    progress,
-  );
+  // A stage appears in full as soon as it has at least one lesson in the
+  // database, so adding lessons to Stage 2 or 3 in the Table Editor shows them
+  // here with no code change. A stage with none yet stays a "coming soon" card.
+  const openStages = stages.filter((stage) => stage.lessons.length > 0);
+  const upcomingStages = stages.filter((stage) => stage.lessons.length === 0);
 
   return (
     <main className="flex flex-1 flex-col">
@@ -106,67 +106,88 @@ export default async function DashboardPage() {
           </section>
         ) : null}
 
-        <section className="border-border bg-card mt-10 rounded-lg border p-6">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <div>
-              <span className="text-gold-strong text-xs font-semibold tracking-[0.15em] uppercase">
-                Stage {stageOne.number}
-              </span>
-              <h2 className="mt-1 text-xl font-semibold">{stageOne.title}</h2>
-            </div>
-            <p className="text-muted-foreground text-sm">
-              {stats.completed} of {stats.total} lessons complete
-            </p>
-          </div>
+        {openStages.map((stage) => (
+          <StageSection key={stage.slug} stage={stage} progress={progress} />
+        ))}
 
-          <p className="text-muted-foreground mt-3 text-sm text-pretty">
-            {stageOne.tagline}
-          </p>
-
-          <div
-            className="bg-muted mt-5 h-2 w-full overflow-hidden rounded-full"
-            role="progressbar"
-            aria-valuenow={stats.percent}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label={`Stage ${stageOne.number} progress`}
-          >
-            <div
-              className="bg-gold h-full rounded-full transition-[width]"
-              style={{ width: `${stats.percent}%` }}
-            />
-          </div>
-
-          <ol className="mt-8 flex flex-col gap-2">
-            {stageOne.lessons.map((lesson, index) => (
-              <LessonRow
-                key={lesson.slug}
-                index={index + 1}
-                stageSlug={stageOne.slug}
-                lesson={lesson}
-                status={progress.get(lesson.slug) ?? "not_started"}
-              />
+        {upcomingStages.length > 0 ? (
+          <section className="mt-8 grid gap-4 sm:grid-cols-2">
+            {upcomingStages.map((stage) => (
+              <article
+                key={stage.slug}
+                className="border-border bg-muted/40 rounded-lg border border-dashed p-6"
+              >
+                <span className="text-muted-foreground text-xs font-semibold tracking-[0.15em] uppercase">
+                  Stage {stage.number} — coming soon
+                </span>
+                <h3 className="mt-1 font-semibold">{stage.title}</h3>
+                <p className="text-muted-foreground mt-2 text-sm text-pretty">
+                  {stage.tagline}
+                </p>
+              </article>
             ))}
-          </ol>
-        </section>
-
-        <section className="mt-8 grid gap-4 sm:grid-cols-2">
-          {stages.slice(1).map((stage) => (
-            <article
-              key={stage.slug}
-              className="border-border bg-muted/40 rounded-lg border border-dashed p-6"
-            >
-              <span className="text-muted-foreground text-xs font-semibold tracking-[0.15em] uppercase">
-                Stage {stage.number} — coming soon
-              </span>
-              <h3 className="mt-1 font-semibold">{stage.title}</h3>
-              <p className="text-muted-foreground mt-2 text-sm text-pretty">
-                {stage.tagline}
-              </p>
-            </article>
-          ))}
-        </section>
+          </section>
+        ) : null}
       </div>
     </main>
+  );
+}
+
+function StageSection({
+  stage,
+  progress,
+}: {
+  stage: Stage;
+  progress: ProgressBySlug;
+}) {
+  const stats = summarize(
+    stage.lessons.map((lesson) => lesson.slug),
+    progress,
+  );
+
+  return (
+    <section className="border-border bg-card mt-10 rounded-lg border p-6">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <div>
+          <span className="text-gold-strong text-xs font-semibold tracking-[0.15em] uppercase">
+            Stage {stage.number}
+          </span>
+          <h2 className="mt-1 text-xl font-semibold">{stage.title}</h2>
+        </div>
+        <p className="text-muted-foreground text-sm">
+          {stats.completed} of {stats.total} lessons complete
+        </p>
+      </div>
+
+      <p className="text-muted-foreground mt-3 text-sm text-pretty">
+        {stage.tagline}
+      </p>
+
+      <div
+        className="bg-muted mt-5 h-2 w-full overflow-hidden rounded-full"
+        role="progressbar"
+        aria-valuenow={stats.percent}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`Stage ${stage.number} progress`}
+      >
+        <div
+          className="bg-gold h-full rounded-full transition-[width]"
+          style={{ width: `${stats.percent}%` }}
+        />
+      </div>
+
+      <ol className="mt-8 flex flex-col gap-2">
+        {stage.lessons.map((lesson, index) => (
+          <LessonRow
+            key={lesson.slug}
+            index={index + 1}
+            stageSlug={stage.slug}
+            lesson={lesson}
+            status={progress.get(lesson.slug) ?? "not_started"}
+          />
+        ))}
+      </ol>
+    </section>
   );
 }
