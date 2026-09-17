@@ -89,6 +89,8 @@ Cards covering safety-critical objectives — see the `is_safety_critical` colum
 
 ## Known gaps in current drafts
 
-*Accurate as of Sep 15 2026. Remove entries as they are resolved.*
+*Accurate as of Sep 17 2026. Remove entries as they are resolved.*
+
+- **`s1-regs-pic.md` and `s1-pattern.md` are freshly drafted and wholly unreviewed.** Three things in them are deliberately unfinished and asked about on the cards themselves: the typical traffic pattern altitude is left as a value gap, the student solo visibility and surface-reference limits are left out entirely, and no medical certificate class is named. Each is a question for the reviewing CFI, not an oversight to be filled in by whoever reads this next.
 
 - **`s1-stalls.md`: the distractor-quality question behind the clustering is still open.** Its correct answers now sit across all four positions, so the document reads honestly and a reviewer's eye has nothing to anticipate. That fixed the reviewability, which is all rule 6 can fix. It did not establish that every distractor was written as a serious alternative rather than as filler arranged around an answer chosen first — reordering cannot tell you that, and neither can the author. Deciding it is what the CFI review is for. Until that review comes back, treat the distractors on those nine cards as unverified.

@@ -156,7 +156,7 @@ Explicitly out of scope for that sprint: VR, live flight-school booking, full me
 **Objective-signal judge cost:** the Claude Haiku 4.5 call that reads each exchange for per-objective signals adds **~0.05–0.10¢ per exchange** — measured from Vercel runtime logs Sep 16 2026: 0.0546¢ when it found no signal, 0.0979¢ when it found one. That is roughly 11–20% on top of the tutor call, so a full exchange costs ~0.54–0.58¢. It is logged as `Objective signal call:` with a `costCents` field and deliberately **not** written to `tutor_usage`, because it is our inference cost, not the student's usage. Vercel runtime logs are retained only briefly — to re-measure, send a tutor message and search `costCents` within minutes. **The judge is skipped on the canned starter prompts**, which carry no evidence of what the student knows, and logs `Objective signal call skipped: starter prompt` instead. The starters are defined once in `src/lib/tutor-starters.ts`, used by both the lesson page and the route, and recognised on the server by exact text — keep it the single definition, or editing a starter's wording silently re-enables the paid call. Verified on the live site Sep 16 2026: a starter logged the skip with no `costCents`, a typed question logged a normal call.
 
 **Known open bugs:**
-- **No quiz card is approved, so no student sees a quiz and `objective_mastery` — the only reportable stream — is still empty.** The machinery is built and verified; the blocker is a CFI reviewing the 18 drafted cards in `docs/cards/`. That is a person, not engineering, and it is the single biggest thing between this product and outcome data for a school.
+- **No quiz card is approved, so no student sees a quiz and `objective_mastery` — the only reportable stream — is still empty.** The machinery is built and verified; the blocker is a CFI reviewing the 36 drafted cards in `docs/cards/` (four lessons: stalls, IMSAFE and PAVE, pilot in command, the traffic pattern). That is a person, not engineering, and it is the single biggest thing between this product and outcome data for a school.
 
 ---
 
@@ -279,7 +279,7 @@ Closes the guardian consent gap: the old `consent` INSERT policy let any authent
 
 **`0014` — card storage.** `quiz_cards` and `quiz_card_options`. Cards live in the database, not in code — lesson content being hardcoded is architectural debt #1, and cards are the content a CFI corrects most. A check constraint makes `approved` impossible without a `reviewed_by` and `reviewed_at`. Exactly one correct option per card, enforced by a partial unique index.
 
-**`0015` — card sync.** Generated from the reviewed markdown in `docs/cards/` by `node scripts/import-cards.mjs`. Regenerate it; never hand-edit it. Plain Node, no dependencies, so it adds nothing to the locked stack.
+**`0015` — card sync.** Generated from the reviewed markdown in `docs/cards/` by `node scripts/import-cards.mjs`. Regenerate it; never hand-edit it, and **re-apply it in the SQL Editor after regenerating**, or the new cards exist only in the repo. Safe to re-run. Plain Node, no dependencies, so it adds nothing to the locked stack. **A markdown file in `docs/cards/` counts as a card document by its first line, `# Quiz cards for review …`** — not by its filename. The scripts print what they ignored, so a card document with a mistyped heading shows up rather than vanishing.
 
 **`0016` — the `status` grant.** Fixes the policy/grant interaction described in Environment gotchas. Found by testing on the live site.
 
