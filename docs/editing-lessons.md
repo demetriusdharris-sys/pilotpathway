@@ -86,7 +86,7 @@ For an objective, `row_key` is its id, such as `s1-stalls.stall-any-airspeed`.
 
 These are possible in the Table Editor, but each has a consequence worth talking through before you do it:
 
-- **Adding a lesson.** The new slug is permanent the moment you save, so choose it carefully. It also needs objectives, and **the dashboard currently lists lessons for Stage 1 only** — a lesson added to Stage 2 or 3 would not appear yet.
+- **Adding a lesson.** The new slug is permanent the moment you save, so choose it carefully, and the lesson needs objectives of its own. It shows up on the dashboard straight away, in whichever stage you put it — a stage with no lessons yet says "coming soon" until its first one is added.
 - **Adding an objective.** Its id is permanent, in the form `lesson-slug.short-fragment`.
 - **Removing an objective.** Never delete one. Set its `retired_at` to the current time instead, so students' past records stay intact. Any quiz cards written against it need attention too.
 - **Deleting a lesson or stage.** The database blocks deleting a lesson that still has objectives, and a stage that still has lessons.

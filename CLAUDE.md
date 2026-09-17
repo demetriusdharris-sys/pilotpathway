@@ -144,7 +144,7 @@ Explicitly out of scope for that sprint: VR, live flight-school booking, full me
 - Guardian invite flow, end to end — invite route issuing hashed single-use tokens, Resend email, redemption page, and guardian status on the profile page. Verified on the live site.
 - `next` preserved through email confirmation, so a guardian who signs up to accept an invite returns to that invite instead of a bare dashboard. Verified on the live site.
 - Quiz cards on the lesson page, graded server-side, each answer written to `objective_assessments`. Confirmed by the founder on the live site Sep 15 2026 using one temporarily approved card, since reverted to draft. Students see no quiz until a CFI approves cards — see Known open bugs.
-- Curriculum: 16 Stage 1 lessons (Stages 2 and 3 are outline labels only), stored in the database and editable in the Supabase Table Editor with no deploy. Verified on the live site Sep 16 2026: an edit to a lesson summary appeared on the lesson page without a deploy and was recorded in `curriculum_edits`.
+- Curriculum: 16 Stage 1 lessons (Stages 2 and 3 have none yet), stored in the database and editable in the Supabase Table Editor with no deploy. Verified on the live site Sep 16 2026: an edit to a lesson summary appeared on the lesson page without a deploy and was recorded in `curriculum_edits`. Adding a lesson to any stage needs no code change either — verified Sep 17 2026.
 - Captain Path tutor chat with conversation memory persisted to `instructor_messages`
 - `studentFirstName` and `masteryNotes` wired to real values (previously dead parameters)
 - Rate limiting: 150 messages/user/day, 5000 global, configurable in `usage_limits` without a deploy
@@ -310,7 +310,7 @@ Stages, lessons, and learning objectives live in `curriculum_stages`, `curriculu
 - **A failed curriculum read throws; it never returns an empty curriculum.** An empty list would render as "lesson not found" or an empty dashboard — an outage disguised as missing content. The tutor route turns it into a 503 saying the lesson cannot be loaded.
 - **The lesson page checks sign-in before looking the lesson up.** Lessons are readable only by signed-in users, so looking one up first would turn "please log in" into "not found".
 
-**Known limit:** the dashboard lists lessons for Stage 1 only. Lessons added to Stage 2 or 3 in the database would not appear until the dashboard is changed.
+**The dashboard shows every stage that has lessons**, each with its own progress bar, and a stage with none is a "coming soon" card. A lesson added to Stage 2 or 3 in the Table Editor appears with no code change. **Verified on the live site Sep 17 2026:** a temporary Stage 2 lesson appeared in a new Stage 2 section reading "0 of 1 lessons complete" and opened; deleting the row returned Stage 2 to a coming-soon card. Nothing else was Stage 1-specific — the lesson page, tutor, starters and progress were already stage-agnostic.
 
 ---
 
