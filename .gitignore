@@ -43,3 +43,6 @@ next-env.d.ts
 
 # scratch space for moving files in and out of a session, not project content
 docs/tmp/
+
+# Office lock files, created when a generated HTML file is opened in Word
+~$*
