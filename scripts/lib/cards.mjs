@@ -15,17 +15,41 @@ import { join } from "node:path";
 
 export const CARDS_DIR = "docs/cards";
 
-/** Card documents, in a stable order. AUTHORING-RULES.md is not one. */
+/**
+ * Card documents, in a stable order.
+ *
+ * A file counts as one by its own first line — `# Quiz cards for review …` —
+ * not by its name. docs/cards also holds the authoring rules and the guide to
+ * recording approvals, and naming every exception in here would mean the next
+ * document added to the folder breaks the import until someone remembers this
+ * function. Skipped files are returned so the scripts can say what they
+ * ignored; a card document with a mistyped heading shows up there rather than
+ * disappearing silently.
+ */
+const CARD_DOCUMENT_HEADING = "# Quiz cards for review";
+
 export function cardFiles() {
-  const files = readdirSync(CARDS_DIR)
-    .filter((f) => f.endsWith(".md") && f !== "AUTHORING-RULES.md")
+  const all = readdirSync(CARDS_DIR)
+    .filter((f) => f.endsWith(".md"))
     .sort();
+
+  const files = [];
+  const skipped = [];
+
+  for (const file of all) {
+    const first = readFileSync(join(CARDS_DIR, file), "utf8").split("\n", 1)[0];
+    if (first.startsWith(CARD_DOCUMENT_HEADING)) {
+      files.push(file);
+    } else {
+      skipped.push(file);
+    }
+  }
 
   if (files.length === 0) {
     throw new Error("no card documents found in docs/cards");
   }
 
-  return files;
+  return { files, skipped };
 }
 
 /**
@@ -161,9 +185,13 @@ export function parseCardDocument(file) {
   };
 }
 
-/** Every card document, parsed, with duplicate card ids refused. */
+/**
+ * Every card document, parsed, with duplicate card ids refused, plus the
+ * markdown files in the folder that are not card documents.
+ */
 export function parseAllCardDocuments() {
-  const documents = cardFiles().map(parseCardDocument);
+  const { files, skipped } = cardFiles();
+  const documents = files.map(parseCardDocument);
   const seen = new Set();
 
   for (const document of documents) {
@@ -175,5 +203,5 @@ export function parseAllCardDocuments() {
     }
   }
 
-  return documents;
+  return { documents, skipped };
 }

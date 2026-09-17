@@ -44,8 +44,9 @@ function inline(value) {
 const LETTERS = ["A", "B", "C", "D"];
 
 let documents;
+let skipped;
 try {
-  documents = parseAllCardDocuments();
+  ({ documents, skipped } = parseAllCardDocuments());
 } catch (error) {
   console.error(`build-review-packet: ${error.message}`);
   process.exit(1);
@@ -330,3 +331,7 @@ for (const document of documents) {
 console.log(
   `  ${allCards.length} cards, ${gaps.length} with a value gap, ${flags.length} with an open question`,
 );
+
+if (skipped.length > 0) {
+  console.log(`  ignored (not card documents): ${skipped.join(", ")}`);
+}

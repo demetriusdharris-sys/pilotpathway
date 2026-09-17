@@ -24,8 +24,9 @@ function lit(value) {
 }
 
 let documents;
+let skipped;
 try {
-  documents = parseAllCardDocuments();
+  ({ documents, skipped } = parseAllCardDocuments());
 } catch (error) {
   console.error(`import-cards: ${error.message}`);
   process.exit(1);
@@ -231,3 +232,7 @@ console.log(
   `  ${gaps} card(s) still carry [CFI: confirm value], ${flags} still carry an open FLAG FOR CFI`,
 );
 console.log("  all imported as draft — nothing here approves a card");
+
+if (skipped.length > 0) {
+  console.log(`  ignored (not card documents): ${skipped.join(", ")}`);
+}
