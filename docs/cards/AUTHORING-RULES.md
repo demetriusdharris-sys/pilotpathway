@@ -89,7 +89,11 @@ Cards covering safety-critical objectives — see the `is_safety_critical` colum
 
 ## Known gaps in current drafts
 
-*Accurate as of Sep 17 2026. Remove entries as they are resolved.*
+*Accurate as of Sep 22 2026. Remove entries as they are resolved.*
+
+- **All sixteen Stage 1 lessons now have nine cards each, and none of the 144 has been reviewed by a CFI.** Everything below is an entry about a particular document; the general position is that the whole set is unreviewed.
+- **22 cards carry a `[CFI: confirm value]` gap.** Those cards cannot be approved as they stand — the placeholder text would be shown to a student. Either the reviewer supplies the value and the card is rewritten and re-imported, or the card is cut.
+- **Four lessons were drafted last and are the least settled (Sep 22 2026): `s1-welcome.md`, `s1-axes-stability.md`, `s1-airport-ramp.md`, `s1-solo-knowledge.md`.** The welcome and solo-knowledge sets both make claims about what this product cannot do — endorse, or judge readiness — which is the right claim to have a CFI check rather than us.
 
 - **`s1-pitot-static-gyro.md` tests one blockage against one instrument at a time, on purpose (Sep 22 2026).** Pitot and static failure indications depend on whether the drain hole is blocked as well as the ram inlet, and on whether the aircraft is climbing or descending, so a card that tries to cover the matrix will be wrong for some case. Two questions are open for the CFI: whether the both-blocked pitot case belongs at pre-solo level, and whether naming a vacuum-driven attitude and heading indicator is right for the fleet these students fly.
 - **`s1-engines-fuel.md` deliberately avoids the fuel-gauge card already in `s1-preflight.md` (Sep 22 2026)** and stays on quality, grade, and planning. Check both lessons before adding a fuel card to either.
