@@ -19,6 +19,8 @@ import { Button } from "@/components/ui/button";
 import { ProfileForm } from "@/components/profile-form";
 import { DeleteAccountForm } from "@/components/delete-account-form";
 import { GuardianInviteForm } from "@/components/guardian-invite-form";
+import { SchoolSharingForm } from "@/components/school-sharing-form";
+import { loadSchoolSharing, type SchoolSharing } from "@/lib/school-sharing";
 
 /**
  * Rendered as the stored `YYYY-MM-DD`-style value rather than a localised
@@ -97,7 +99,9 @@ function GuardianSection({
           </p>
           <p className="text-muted-foreground mt-2 text-xs text-pretty">
             Waiting for them to confirm
-            {expiryLine(pending) ? ` — the link works until ${expiryLine(pending)}` : ""}
+            {expiryLine(pending)
+              ? ` — the link works until ${expiryLine(pending)}`
+              : ""}
             . If it has not arrived, check their spam folder and then resend.
           </p>
           {pending.invitedEmail ? (
@@ -131,6 +135,37 @@ function GuardianSection({
  * guardian-access.ts, and the download route and delete action re-check them
  * on the server regardless of what this page showed.
  */
+/**
+ * Shown only to students who belong to an organisation. Nobody else has a
+ * decision to make here, and an empty "your school" heading would suggest
+ * otherwise.
+ */
+function SchoolSharingSection({ schools }: { schools: SchoolSharing[] }) {
+  if (schools.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="border-border bg-card mt-8 rounded-lg border p-6">
+      <span className="text-gold-strong text-xs font-semibold tracking-[0.15em] uppercase">
+        Your school
+      </span>
+      <h2 className="mt-1 text-xl font-semibold">Sharing your progress</h2>
+      <p className="text-muted-foreground mt-2 text-sm text-pretty">
+        Staff can see your lesson progress and quiz results only if you share
+        them, and only at the school you shared them with. Your conversations
+        with Captain Path are never shared. You can stop at any time.
+      </p>
+
+      <div className="mt-5 flex flex-col gap-3">
+        {schools.map((school) => (
+          <SchoolSharingForm key={school.organizationId} school={school} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function GuardedStudentsSection({ students }: { students: GuardedStudent[] }) {
   if (students.length === 0) {
     return null;
@@ -234,6 +269,19 @@ export default async function ProfilePage() {
 
   const guardianLinks = await loadGuardianLinks(supabase, user.id);
 
+  // A failed read shows no section rather than a section claiming nothing is
+  // shared — which would be a statement about the student's privacy that we
+  // could not stand behind.
+  let schools: SchoolSharing[] = [];
+  try {
+    schools = await loadSchoolSharing(supabase, user.id);
+  } catch (error) {
+    console.error("Failed to load school sharing:", {
+      userId: user.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
   // Reading a student's profile needs the service role; a guardian cannot see
   // it under RLS. If that is unavailable or fails, the section is simply not
   // shown — never shown with guessed permissions.
@@ -295,6 +343,8 @@ export default async function ProfilePage() {
 
         <GuardianSection dateOfBirth={dateOfBirth} links={guardianLinks} />
 
+        <SchoolSharingSection schools={schools} />
+
         <GuardedStudentsSection students={guardedStudents} />
 
         <section className="border-border bg-card mt-8 rounded-lg border p-6">
@@ -309,8 +359,8 @@ export default async function ProfilePage() {
           </p>
           {isGuardian ? (
             <p className="text-foreground mt-2 text-sm text-pretty">
-              This is your own account&apos;s data. To download a student&apos;s,
-              use their section above.
+              This is your own account&apos;s data. To download a
+              student&apos;s, use their section above.
             </p>
           ) : null}
           <Button asChild variant="outline" className="mt-4">
@@ -341,8 +391,9 @@ export default async function ProfilePage() {
           <p className="text-muted-foreground mt-3 text-sm text-pretty">
             This permanently removes your profile, lesson progress,
             conversations with your instructor, quiz answers, and any guardian
-            links. <strong className="text-foreground">It cannot be undone.</strong>{" "}
-            If you want a copy of anything, download your data first.
+            links.{" "}
+            <strong className="text-foreground">It cannot be undone.</strong> If
+            you want a copy of anything, download your data first.
           </p>
           <DeleteAccountForm />
         </section>

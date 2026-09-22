@@ -11,6 +11,7 @@ import {
   settleGuardianAction,
   startGuardianAction,
 } from "@/lib/guardian-audit";
+import { SCHOOL_PROGRESS_SCOPE } from "@/lib/school-sharing";
 import type { AuthState } from "@/app/(auth)/actions";
 
 /**
@@ -158,7 +159,9 @@ export async function deleteAccount(
   });
 
   if (passwordError) {
-    return { error: "That password is not right. Your account was not deleted." };
+    return {
+      error: "That password is not right. Your account was not deleted.",
+    };
   }
 
   const admin = createAdminClient();
@@ -341,4 +344,150 @@ export async function deleteStudentAccount(
   revalidatePath("/profile");
 
   return { message: "Their account has been deleted." };
+}
+
+/**
+ * A student agreeing to share their progress with one named organisation.
+ *
+ * Written with the student's own client, not the service role: the INSERT
+ * policy from 0007 is what establishes that a person may only grant consent
+ * for themselves, and going around it would make that policy decorative.
+ *
+ * Consent is per organisation. The form names one, and 0021's constraint
+ * refuses a school_progress grant that names none.
+ */
+export async function shareProgressWithSchool(
+  _prevState: AuthState,
+  formData: FormData,
+): Promise<AuthState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Please log in again." };
+  }
+
+  const organizationId = String(formData.get("organizationId") ?? "").trim();
+
+  if (!organizationId) {
+    return { error: "Nothing was shared." };
+  }
+
+  // A second live grant for the same school would leave two rows to revoke,
+  // and revoking one would look like it had worked.
+  const { data: existing, error: readError } = await supabase
+    .from("consent")
+    .select("id")
+    .eq("subject_user_id", user.id)
+    .eq("scope_key", SCHOOL_PROGRESS_SCOPE)
+    .eq("audience_org_id", organizationId)
+    .is("revoked_at", null)
+    .limit(1);
+
+  if (readError) {
+    console.error("Consent read failed:", {
+      userId: user.id,
+      error: readError.message,
+    });
+    return { error: "We could not save that just now. Try again." };
+  }
+
+  if (existing && existing.length > 0) {
+    revalidatePath("/profile");
+    return { message: "You are already sharing your progress with them." };
+  }
+
+  const { error: writeError } = await supabase.from("consent").insert({
+    subject_user_id: user.id,
+    granted_by: user.id,
+    granted_by_relationship: "self",
+    scope_key: SCHOOL_PROGRESS_SCOPE,
+    audience_org_id: organizationId,
+  });
+
+  if (writeError) {
+    console.error("Consent grant failed:", {
+      userId: user.id,
+      organizationId,
+      code: writeError.code,
+      error: writeError.message,
+    });
+    return { error: "We could not save that just now. Try again." };
+  }
+
+  revalidatePath("/profile");
+
+  return { message: "Your progress is now shared with them." };
+}
+
+/**
+ * Taking it back.
+ *
+ * Revocation sets revoked_at on the grant itself — the record of what was
+ * agreed, and when it ended, is kept. There are deliberately no client UPDATE
+ * policies on consent (0006), so this is the one part that needs the service
+ * role, and it is scoped to the signed-in student's own live grant for the
+ * named organisation.
+ */
+export async function stopSharingProgress(
+  _prevState: AuthState,
+  formData: FormData,
+): Promise<AuthState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Please log in again." };
+  }
+
+  const organizationId = String(formData.get("organizationId") ?? "").trim();
+
+  if (!organizationId) {
+    return { error: "Nothing was changed." };
+  }
+
+  const admin = createAdminClient();
+
+  if (!admin) {
+    console.error(
+      "Consent revocation blocked: SUPABASE_SERVICE_ROLE_KEY is missing.",
+    );
+    return {
+      error:
+        "We could not change that just now. This is on our side, not yours. Nothing was changed.",
+    };
+  }
+
+  const { data, error } = await admin
+    .from("consent")
+    .update({
+      revoked_at: new Date().toISOString(),
+      revocation_reason: "Revoked by the student.",
+    })
+    .eq("subject_user_id", user.id)
+    .eq("scope_key", SCHOOL_PROGRESS_SCOPE)
+    .eq("audience_org_id", organizationId)
+    .is("revoked_at", null)
+    .select("id");
+
+  if (error) {
+    console.error("Consent revocation failed:", {
+      userId: user.id,
+      organizationId,
+      error: error.message,
+    });
+    return { error: "We could not change that just now. Try again." };
+  }
+
+  revalidatePath("/profile");
+
+  if (!data || data.length === 0) {
+    return { message: "You were not sharing your progress with them." };
+  }
+
+  return { message: "They can no longer see your progress." };
 }
