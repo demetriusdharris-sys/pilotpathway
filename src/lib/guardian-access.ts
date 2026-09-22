@@ -18,6 +18,10 @@ import { ADULT_AGE_YEARS, hasReachedAge } from "@/lib/date-of-birth";
  *     outsider power over someone who may be an adult, so unknown age means no
  *     guardian actions.
  *   - Deleting the account: any verified guardian.
+ *   - Sharing progress with the student's school: any verified guardian. 0007
+ *     settled this tier — an email invite is sufficient for school_progress,
+ *     and the grant itself is recorded with the guardian's id, so it is both
+ *     reversible and attributable.
  *   - Downloading the data: only a guardian verified by the student's school or
  *     by staff. An email invite proves control of a mailbox, not guardianship,
  *     and a download is a minor's private tutor conversations. Same tiering as
@@ -37,6 +41,7 @@ export type GuardedStudent = {
   dateOfBirthKnown: boolean;
   isMinor: boolean;
   canDelete: boolean;
+  canShare: boolean;
   canExport: boolean;
 };
 
@@ -48,7 +53,10 @@ type ProfileRow = {
   date_of_birth: unknown;
 };
 
-function describe(link: LinkRow, profile: ProfileRow | undefined): GuardedStudent | null {
+function describe(
+  link: LinkRow,
+  profile: ProfileRow | undefined,
+): GuardedStudent | null {
   const studentId = link.student_user_id;
   const verificationMethod = link.verification_method;
 
@@ -60,7 +68,8 @@ function describe(link: LinkRow, profile: ProfileRow | undefined): GuardedStuden
     typeof profile?.date_of_birth === "string" ? profile.date_of_birth : null;
 
   const dateOfBirthKnown = dateOfBirth !== null;
-  const isMinor = dateOfBirthKnown && !hasReachedAge(dateOfBirth, ADULT_AGE_YEARS);
+  const isMinor =
+    dateOfBirthKnown && !hasReachedAge(dateOfBirth, ADULT_AGE_YEARS);
 
   return {
     studentId,
@@ -71,6 +80,7 @@ function describe(link: LinkRow, profile: ProfileRow | undefined): GuardedStuden
     dateOfBirthKnown,
     isMinor,
     canDelete: isMinor,
+    canShare: isMinor,
     canExport:
       isMinor && STRONG_VERIFICATION_METHODS.includes(verificationMethod),
   };

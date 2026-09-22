@@ -11,7 +11,7 @@ import {
   settleGuardianAction,
   startGuardianAction,
 } from "@/lib/guardian-audit";
-import { SCHOOL_PROGRESS_SCOPE } from "@/lib/school-sharing";
+import { SCHOOL_PROGRESS_SCOPE, studentBelongsTo } from "@/lib/school-sharing";
 import type { AuthState } from "@/app/(auth)/actions";
 
 /**
@@ -490,4 +490,223 @@ export async function stopSharingProgress(
   }
 
   return { message: "They can no longer see your progress." };
+}
+
+/**
+ * A verified guardian sharing a minor's progress with their school.
+ *
+ * Three checks, in this order, and none of them trusts the form:
+ *
+ *   1. authorizeGuardianAction — is this a verified guardian of that student,
+ *      right now, and is the student a known minor? Same gate as the delete.
+ *   2. studentBelongsTo — is the organisation one the student is enrolled at?
+ *      The database does not check this: the consent policy checks the
+ *      guardian, and 0021's constraint only requires that some organisation is
+ *      named. Without this a guardian could consent to any organisation id.
+ *   3. The INSERT itself goes through the guardian's own client, so the policy
+ *      from 0007 is what finally allows or refuses it.
+ *
+ * The grant records granted_by and granted_by_relationship = 'guardian', so
+ * who agreed on the student's behalf is part of the permanent record — and the
+ * student can revoke it themselves from their own profile.
+ */
+export async function shareStudentProgress(
+  _prevState: AuthState,
+  formData: FormData,
+): Promise<AuthState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Please log in again." };
+  }
+
+  const studentId = String(formData.get("studentId") ?? "").trim();
+  const organizationId = String(formData.get("organizationId") ?? "").trim();
+
+  if (!studentId || !organizationId) {
+    return { error: "Nothing was shared." };
+  }
+
+  const admin = createAdminClient();
+
+  if (!admin) {
+    console.error(
+      "Guardian sharing blocked: SUPABASE_SERVICE_ROLE_KEY is missing.",
+    );
+    return {
+      error:
+        "We could not change that just now. This is on our side, not yours. Nothing was changed.",
+    };
+  }
+
+  let student;
+  try {
+    student = await authorizeGuardianAction(admin, user.id, studentId);
+
+    if (
+      student &&
+      student.canShare &&
+      !(await studentBelongsTo(admin, studentId, organizationId))
+    ) {
+      return { error: "That school is not one they are enrolled at." };
+    }
+  } catch (error) {
+    console.error("Guardian sharing authorization failed:", {
+      guardianId: user.id,
+      studentId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return { error: "We could not change that just now. Try again." };
+  }
+
+  if (!student || !student.canShare) {
+    return { error: "You can't change sharing for this account." };
+  }
+
+  const { data: existing, error: readError } = await admin
+    .from("consent")
+    .select("id")
+    .eq("subject_user_id", studentId)
+    .eq("scope_key", SCHOOL_PROGRESS_SCOPE)
+    .eq("audience_org_id", organizationId)
+    .is("revoked_at", null)
+    .limit(1);
+
+  if (readError) {
+    console.error("Guardian consent read failed:", {
+      guardianId: user.id,
+      studentId,
+      error: readError.message,
+    });
+    return { error: "We could not change that just now. Try again." };
+  }
+
+  if (existing && existing.length > 0) {
+    revalidatePath("/profile");
+    return { message: "Their progress is already shared with that school." };
+  }
+
+  const { error: writeError } = await supabase.from("consent").insert({
+    subject_user_id: studentId,
+    granted_by: user.id,
+    granted_by_relationship: "guardian",
+    scope_key: SCHOOL_PROGRESS_SCOPE,
+    audience_org_id: organizationId,
+  });
+
+  if (writeError) {
+    console.error("Guardian consent grant failed:", {
+      guardianId: user.id,
+      studentId,
+      organizationId,
+      code: writeError.code,
+      error: writeError.message,
+    });
+    return { error: "We could not save that just now. Try again." };
+  }
+
+  console.info("Guardian shared student progress:", {
+    guardianId: user.id,
+    studentId,
+    organizationId,
+    verificationMethod: student.verificationMethod,
+  });
+
+  revalidatePath("/profile");
+
+  return { message: "Their progress is now shared with that school." };
+}
+
+/**
+ * A guardian taking that back. Also usable on a grant the student made
+ * themselves: revoking shares less, which is the safe direction for a minor,
+ * and the student can always share again from their own profile.
+ */
+export async function stopStudentProgressSharing(
+  _prevState: AuthState,
+  formData: FormData,
+): Promise<AuthState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Please log in again." };
+  }
+
+  const studentId = String(formData.get("studentId") ?? "").trim();
+  const organizationId = String(formData.get("organizationId") ?? "").trim();
+
+  if (!studentId || !organizationId) {
+    return { error: "Nothing was changed." };
+  }
+
+  const admin = createAdminClient();
+
+  if (!admin) {
+    console.error(
+      "Guardian sharing blocked: SUPABASE_SERVICE_ROLE_KEY is missing.",
+    );
+    return {
+      error:
+        "We could not change that just now. This is on our side, not yours. Nothing was changed.",
+    };
+  }
+
+  let student;
+  try {
+    student = await authorizeGuardianAction(admin, user.id, studentId);
+  } catch (error) {
+    console.error("Guardian sharing authorization failed:", {
+      guardianId: user.id,
+      studentId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return { error: "We could not change that just now. Try again." };
+  }
+
+  if (!student || !student.canShare) {
+    return { error: "You can't change sharing for this account." };
+  }
+
+  const { data, error } = await admin
+    .from("consent")
+    .update({
+      revoked_at: new Date().toISOString(),
+      revocation_reason: "Revoked by the student's guardian.",
+    })
+    .eq("subject_user_id", studentId)
+    .eq("scope_key", SCHOOL_PROGRESS_SCOPE)
+    .eq("audience_org_id", organizationId)
+    .is("revoked_at", null)
+    .select("id");
+
+  if (error) {
+    console.error("Guardian consent revocation failed:", {
+      guardianId: user.id,
+      studentId,
+      organizationId,
+      error: error.message,
+    });
+    return { error: "We could not change that just now. Try again." };
+  }
+
+  console.info("Guardian stopped student progress sharing:", {
+    guardianId: user.id,
+    studentId,
+    organizationId,
+    rows: data?.length ?? 0,
+  });
+
+  revalidatePath("/profile");
+
+  if (!data || data.length === 0) {
+    return { message: "Their progress was not being shared with that school." };
+  }
+
+  return { message: "That school can no longer see their progress." };
 }

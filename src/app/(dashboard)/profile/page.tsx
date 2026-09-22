@@ -20,7 +20,12 @@ import { ProfileForm } from "@/components/profile-form";
 import { DeleteAccountForm } from "@/components/delete-account-form";
 import { GuardianInviteForm } from "@/components/guardian-invite-form";
 import { SchoolSharingForm } from "@/components/school-sharing-form";
-import { loadSchoolSharing, type SchoolSharing } from "@/lib/school-sharing";
+import { GuardianSchoolSharingForm } from "@/components/guardian-school-sharing-form";
+import {
+  loadSchoolSharing,
+  loadSchoolSharingForStudent,
+  type SchoolSharing,
+} from "@/lib/school-sharing";
 
 /**
  * Rendered as the stored `YYYY-MM-DD`-style value rather than a localised
@@ -166,7 +171,15 @@ function SchoolSharingSection({ schools }: { schools: SchoolSharing[] }) {
   );
 }
 
-function GuardedStudentsSection({ students }: { students: GuardedStudent[] }) {
+type GuardedStudentSchools = Map<string, SchoolSharing[]>;
+
+function GuardedStudentsSection({
+  students,
+  schoolsByStudent,
+}: {
+  students: GuardedStudent[];
+  schoolsByStudent: GuardedStudentSchools;
+}) {
   if (students.length === 0) {
     return null;
   }
@@ -219,6 +232,29 @@ function GuardedStudentsSection({ students }: { students: GuardedStudent[] }) {
                     by their school or by PilotPathway staff.
                   </p>
                 )}
+
+                {student.canShare &&
+                (schoolsByStudent.get(student.studentId) ?? []).length > 0 ? (
+                  <div className="mt-4">
+                    <h3 className="text-sm font-semibold">
+                      Sharing their progress with their school
+                    </h3>
+                    <p className="text-muted-foreground mt-1 text-sm text-pretty">
+                      Staff see lesson progress and quiz results only. Their
+                      conversations with Captain Path are never shared.
+                    </p>
+                    {(schoolsByStudent.get(student.studentId) ?? []).map(
+                      (school) => (
+                        <GuardianSchoolSharingForm
+                          key={school.organizationId}
+                          studentId={student.studentId}
+                          studentLabel={student.firstName ?? "They"}
+                          school={school}
+                        />
+                      ),
+                    )}
+                  </div>
+                ) : null}
 
                 <details className="mt-4">
                   <summary className="text-destructive cursor-pointer text-sm font-medium">
@@ -300,6 +336,30 @@ export default async function ProfilePage() {
 
   const isGuardian = guardedStudents.length > 0;
 
+  // One read per guarded student, and only for students this guardian may act
+  // for. A failure leaves that student's schools out rather than rendering a
+  // control whose state we are unsure of.
+  const schoolsByStudent: GuardedStudentSchools = new Map();
+
+  if (admin) {
+    for (const student of guardedStudents) {
+      if (!student.canShare) continue;
+
+      try {
+        schoolsByStudent.set(
+          student.studentId,
+          await loadSchoolSharingForStudent(admin, student.studentId),
+        );
+      } catch (error) {
+        console.error("Failed to load a student's schools:", {
+          guardianId: user.id,
+          studentId: student.studentId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  }
+
   return (
     <main className="flex flex-1 flex-col">
       <header className="border-border border-b">
@@ -345,7 +405,10 @@ export default async function ProfilePage() {
 
         <SchoolSharingSection schools={schools} />
 
-        <GuardedStudentsSection students={guardedStudents} />
+        <GuardedStudentsSection
+          students={guardedStudents}
+          schoolsByStudent={schoolsByStudent}
+        />
 
         <section className="border-border bg-card mt-8 rounded-lg border p-6">
           <span className="text-gold-strong text-xs font-semibold tracking-[0.15em] uppercase">

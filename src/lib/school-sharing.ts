@@ -114,3 +114,47 @@ export async function loadSchoolSharing(
 
   return sharing;
 }
+
+/**
+ * The same picture for a student a guardian is responsible for.
+ *
+ * Read with the service role, because a guardian cannot see a student's
+ * memberships or consent rows under RLS — and should not be able to outside of
+ * exactly this check. **Every caller must have run authorizeGuardianAction
+ * first**; this function establishes nothing about who is asking.
+ */
+export async function loadSchoolSharingForStudent(
+  admin: SupabaseClient,
+  studentId: string,
+): Promise<SchoolSharing[]> {
+  return loadSchoolSharing(admin, studentId);
+}
+
+/**
+ * Is this student actually enrolled at this organisation?
+ *
+ * The consent policy from 0007 checks that the grantor is a verified guardian,
+ * and 0021's constraint checks that a school_progress grant names an
+ * organisation — but nothing in the database checks that the organisation
+ * named is one the student belongs to. Without this, a guardian could consent
+ * on a minor's behalf to an arbitrary organisation id.
+ */
+export async function studentBelongsTo(
+  admin: SupabaseClient,
+  studentId: string,
+  organizationId: string,
+): Promise<boolean> {
+  const { data, error } = await admin
+    .from("organization_members")
+    .select("id")
+    .eq("user_id", studentId)
+    .eq("organization_id", organizationId)
+    .eq("org_role", "member")
+    .limit(1);
+
+  if (error) {
+    throw new Error(`student membership: ${error.message}`);
+  }
+
+  return (data ?? []).length > 0;
+}
