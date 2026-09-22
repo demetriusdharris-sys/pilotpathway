@@ -329,7 +329,14 @@ Each objective on a lesson page shows its state, and each stage on the dashboard
 - **Sharing is offered only where the account is an enrolled student.** Staff of an organisation would be sharing with themselves; the control is not shown to them.
 - **Revocation is immediate and is the student's own.** Granting goes through the student's client so the INSERT policy from `0007` remains the control; revoking needs the service role, because `consent` deliberately has no client UPDATE policy, and is scoped to that student's own live grant.
 
-**Known limits:** organisations, memberships, and staff roles are created in SQL — there is no admin UI, and no cohorts. A guardian may grant `school_progress` for a minor under `0007`'s policy, but no interface does it yet; a minor can currently only share for themselves. The roster shows counts, not which objectives.
+**A guardian can share a minor's progress with their school, and stop it.** On `/profile`, each minor a verified guardian is responsible for lists the schools that student is enrolled at, with the same two-way control the student has. **Verified on the live site Sep 22 2026** with a 14-year-old test student and their email-invite guardian: the guardian shared, the student appeared on the staff roster, the student's own profile read "Sharing — agreed by your parent or guardian", and the student stopped it themselves and vanished from the roster.
+
+- **Any verified guardian may share; the tier is `0007`'s, not the download's.** An email invite is sufficient for `school_progress`, and unlike a download this is reversible and attributable — the grant records `granted_by` and `granted_by_relationship`.
+- **The student can always revoke what their guardian agreed to**, from their own profile. Revoking shares less, which is the safe direction for a minor, and the guardian can grant again if it was a mistake. A guardian can likewise revoke a grant the student made.
+- **The organisation must be one the student is actually enrolled at**, checked in `studentBelongsTo` before the grant. The database does not check this: `0007`'s policy checks the guardian and `0021`'s constraint only requires that *some* organisation is named, so without this check a guardian could consent on a minor's behalf to any organisation id.
+- **Staff are not told who agreed.** The roster shows the student and their progress; whether the student or their guardian consented is on the consent record, not on a teacher's screen.
+
+**Known limits:** organisations, memberships, and staff roles are created in SQL — there is no admin UI, and no cohorts. The roster shows counts, not which objectives. Guardian sharing is logged (`Guardian shared student progress:`) but not written to `guardian_actions`, because the consent row itself is the permanent, attributable record.
 
 ---
 
