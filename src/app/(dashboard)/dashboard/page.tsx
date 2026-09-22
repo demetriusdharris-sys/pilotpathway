@@ -5,6 +5,7 @@ import { getSupabaseEnv } from "@/lib/supabase/env";
 import { getProgress, summarize, type ProgressBySlug } from "@/lib/progress";
 import type { Stage } from "@/lib/curriculum";
 import { loadCurriculum } from "@/lib/curriculum-store";
+import { loadStaffOrganizations } from "@/lib/school-roster";
 import {
   loadAssessableObjectives,
   loadMastery,
@@ -46,6 +47,19 @@ export default async function DashboardPage() {
       loadAssessableObjectives(supabase),
     ]);
 
+  // Staff get a way into their roster. A student is staff of nothing, so the
+  // read comes back empty and no link appears. A failed read shows no link
+  // rather than a link to a page that would not load.
+  let isStaff = false;
+  try {
+    isStaff = (await loadStaffOrganizations(supabase, user.id)).length > 0;
+  } catch (error) {
+    console.error("Failed to check staff membership:", {
+      userId: user.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
   // Every account created before the age gate has no date of birth, and
   // is_adult() treats unknown age as a minor. Nothing else ever sends those
   // students to the profile page, so they would stay unable to approve
@@ -82,6 +96,14 @@ export default async function DashboardPage() {
             PilotPathway.ai
           </Link>
           <div className="flex items-center gap-4">
+            {isStaff ? (
+              <Link
+                href="/school"
+                className="text-muted-foreground hover:text-foreground text-sm font-medium underline-offset-4 hover:underline"
+              >
+                Your students
+              </Link>
+            ) : null}
             <Link
               href="/profile"
               className="text-muted-foreground hover:text-foreground text-sm font-medium underline-offset-4 hover:underline"
