@@ -11,6 +11,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  *
  * Read with the caller's own client. The policies from 0006 scope memberships
  * and consent rows to the signed-in person.
+ *
+ * Only memberships held as a student are offered. Staff of an organisation
+ * have nothing to decide here — they would be sharing their progress with
+ * themselves — and showing them the control suggests otherwise.
  */
 
 export const SCHOOL_PROGRESS_SCOPE = "school_progress";
@@ -40,7 +44,8 @@ export async function loadSchoolSharing(
   const { data: memberships, error: membershipError } = await supabase
     .from("organization_members")
     .select("organization_id, org_role, organizations(id, name, org_type)")
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .eq("org_role", "member");
 
   if (membershipError) {
     throw new Error(`organization memberships: ${membershipError.message}`);
