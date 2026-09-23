@@ -34,6 +34,18 @@ export default async function SignUpPage({
         next={next}
       />
 
+      <p className="text-muted-foreground text-xs text-pretty">
+        By creating an account you agree to our{" "}
+        <Link href="/terms" className="text-foreground underline">
+          terms
+        </Link>{" "}
+        and{" "}
+        <Link href="/privacy" className="text-foreground underline">
+          privacy policy
+        </Link>
+        . We never sell your information or show you advertising.
+      </p>
+
       <p className="text-muted-foreground text-sm">
         Already have an account?{" "}
         <Link href="/login" className="text-foreground font-medium underline">

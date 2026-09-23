@@ -78,8 +78,22 @@ export default function HomePage() {
       </section>
 
       <footer className="border-border border-t">
-        <div className="text-muted-foreground mx-auto max-w-5xl px-6 py-8 text-sm">
-          PilotPathway.ai — the digital evolution of Fly Compton Foundation.
+        <div className="text-muted-foreground mx-auto flex max-w-5xl flex-col gap-3 px-6 py-8 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <p>
+            PilotPathway.ai — the digital evolution of Fly Compton Foundation, a
+            project of Equity Engine, a 501(c)(3) nonprofit.
+          </p>
+          <div className="flex flex-wrap gap-x-4 gap-y-2">
+            <Link href="/privacy" className="hover:text-foreground underline">
+              Privacy
+            </Link>
+            <Link href="/terms" className="hover:text-foreground underline">
+              Terms
+            </Link>
+            <Link href="/contact" className="hover:text-foreground underline">
+              Contact
+            </Link>
+          </div>
         </div>
       </footer>
     </main>
