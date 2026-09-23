@@ -72,7 +72,7 @@ Vercel can serve an older deployment than `master` contains. Check what is actua
 - **Supabase SQL Editor wraps a multi-statement paste in a single transaction.** A failure partway through rolls the whole paste back, so there is no partial state to clean up — but also no partial progress. Fix the statement that failed and re-run the entire migration.
 - **`0010` is written for the Supabase SQL Editor specifically.** Because the editor supplies the transaction, an explicit `begin;`/`commit;` inside the file conflicts with that wrapper and caused the temp table to drop early. The file therefore opens no transaction of its own and drops its temp table explicitly. Run through `psql` it would not be atomic: each statement would autocommit, so the refusal check would fire after the writes had already landed.
 - **The founder runs git commands in a separate PowerShell window**, at the direction of a chat session. `origin/master` moving forward without Claude Code having pushed is expected and normal. This has been misdiagnosed as an automatic push three times — check this note before reporting it as an anomaly again.
-- **A commit message is not a record of apply state.** Migration commits say "(not yet applied)" because that was true when the file was written; they are never amended once the migration is applied. **As of Sep 22 2026, every migration `0001` through `0021` is applied to production and verified.** Do not infer from a commit message that a migration is pending — ask, or check the database.
+- **A commit message is not a record of apply state.** Migration commits say "(not yet applied)" because that was true when the file was written; they are never amended once the migration is applied. **As of Sep 23 2026, every migration `0001` through `0025` is applied to production and verified.** Do not infer from a commit message that a migration is pending — ask, or check the database.
 - **Secrets are not visible from the repo, and their absence there means nothing.** `.env.local` is gitignored and Vercel environment variables live in Vercel, not on disk. `RESEND_API_KEY`, `ANTHROPIC_API_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` are all set in both. Do not conclude a key is missing because grep did not find it.
 - **`pnpm lint` and `pnpm exec tsc --noEmit` do not catch Next's Server Action export rules.** A `"use server"` module may only export async functions; exporting a sync helper from one passes both checks and then fails `pnpm build`. Run the build whenever you touch a `"use server"` file.
 - **A `RETURNS TABLE` clause declares variables, and they shadow column names.** `0024` returned `table (raw_score smallint, question_count smallint)`; inside the body `question_count` then matched both that output variable and the column on `practice_attempts`, and every submit failed with `column reference "question_count" is ambiguous`. The migration applied cleanly — the ambiguity only bites when the function runs — and nothing in lint, tsc or the build can see inside a function body. `0025` fixed it by returning void and qualifying every column reference. **Qualify columns inside plpgsql, and give a function the narrowest return type its caller actually uses.**
@@ -158,6 +158,43 @@ Explicitly out of scope for that sprint: VR, live flight-school booking, full me
 
 **Known open bugs:**
 - **No quiz card is approved, so no student sees a quiz and `objective_mastery` — the only reportable stream — is still empty.** The machinery is built and verified; the blocker is a CFI reviewing the 144 drafted cards in `docs/cards/`. **Stage 1 is now fully covered — all sixteen lessons, all 48 objectives, three cards each** (Sep 22 2026). 22 cards carry a `[CFI: confirm value]` gap and 17 carry an open question for the reviewer; **a card with a gap must not be approved as it stands**, because the placeholder would render to a student. Sent to a CFI Sep 22 2026; no answer yet. That is a person, not engineering, and it is the single biggest thing between this product and outcome data for a school.
+
+---
+
+## Practice tests — migrations `0022`–`0025`
+
+A student sits a randomised, stratified practice test drawn from original questions keyed to ACS codes. **Nothing costs an Anthropic call at test time**: explanations are written once and stored, and a test is database reads. Free to every student, permanently — the same rule as safety content.
+
+**Verified end to end on the live site Sep 23 2026**, against a throwaway synthetic bank since no real question is approved yet: a 60-question test assembled with a timer, answers saved per tap, **a mid-test refresh on a phone kept every answer**, submission scored and produced the report, and **a second test drew different questions** — which is the exposure write proving itself. The synthetic bank was then deleted and the bank read back at zero.
+
+### The tables
+
+| Table | What it holds |
+|---|---|
+| `question_bank` | Original questions: ACS code, knowledge area, stem, three choices, answer, explanation, optional figure |
+| `practice_attempts` | One sitting: mode, question count, score, and a readiness estimate with its confidence |
+| `practice_answers` | One row per question served, with the choice order it was displayed in |
+| `question_exposure` | What this student has seen, how often, and when — the heart of the non-repeat engine |
+
+### Locked design decisions
+
+- **Only `cfi_approved` questions are ever served**, enforced by the RLS policy and again in every query. A draft question must never reach a learner. **"Derived from FAA material" is not a substitute for review** — the derivation is where the errors enter, and the cost of a wrong one lands on the student in a cockpit or an oral exam.
+- **`correct_choice` and `explanation` are not granted to `authenticated` at all.** The spec asked to hide them until submission; column privileges cannot express a per-row condition, and a view that pretends to is how `0014` shipped a bug. The answer is simply unreachable from a browser, and a Server Action returns the explanation after grading. `is_correct` on `practice_answers` is ungranted for the same reason — a student could otherwise ask mid-test whether they were right.
+- **Students never write their own answers.** Selections are saved server-side with the service role; grading happens once, in `submit_practice_attempt`. Same reasoning as `0009`: a readiness score a student can forge is worse than none.
+- **The whole paper is fixed when the attempt starts** — which questions, in which order, with which choice order. A refresh, a dead connection, or a sleeping phone resumes the same test. Assembling per render would hand out a different test on every reload.
+- **Answers are saved on every tap, with the state shown**, and a failed save is retried once and then said plainly. This audience is mobile-first on unreliable connections; a silently lost answer is a wrong score.
+- **Choice order is shuffled per attempt and stored.** The student submits a display position, never a letter, and `selected_choice` is stored canonically. "It was the second one" is worth nothing.
+- **Scoring and exposure happen in one transaction**, because supabase-js cannot wrap three statements and a half-written submit would let the engine re-serve questions the student just saw.
+- **Unanswered questions stay null rather than counting as wrong.** A skipped question and a wrong answer are different facts; only the score treats them alike.
+- **The test blueprint is ours, not the FAA's.** 14 CFR 61.105(b) names the knowledge areas; the per-area question counts are not published. `TEST_BLUEPRINT` in `src/lib/practice/assemble.ts` holds our weights, summing to 60, and **a CFI should review them** before a readiness number rests on them.
+- **A full test is refused unless every area can be filled.** A test silently missing regulations or weather is worse than no test; targeted practice still works on the areas that are ready.
+- **The recency rule is a floor.** A question seen in the last three days is excluded outright, relaxing to 24 hours and then not at all, only when the bank cannot fill the slots — and every relaxation is logged, because it is the bank saying it is too thin in that area. `getBankHealth()` is the admin-side view of the same fact, never shown to students.
+
+**From the FAA Airman Knowledge Testing Matrix (revised 22 October 2025): PAR is 60 scored questions, 2.0 hours, passing 70.** Reduced from 2.5 hours in April 2023, which is why older sources disagree. The FAA's site refuses automated readers, so this came from two independent secondary readings rather than the document itself — **confirm it before a student relies on the timer**.
+
+**Testing without real content:** `node scripts/build-synthetic-seed.mjs` writes a throwaway bank into `docs/tmp` plus its own cleanup. The questions are **transparently fake and contain no aviation claims**, because an approved row is servable to a student and the harm in unreviewed content is a wrong fact. Seed, test, delete, and check the bank reads zero. `scripts/check-assembly.mjs` exercises the selection logic with no database at all.
+
+**What is not built yet:** readiness scoring (the columns exist and stay null), figures rendered inline rather than referenced by number, an admin page over `getBankHealth()`, and any authoring or review pipeline for the questions themselves. **The bank is empty.** Roughly 600 approved questions would give one student ten non-repeating full tests; about 180 makes a usable first release.
 
 ---
 
