@@ -194,7 +194,19 @@ A student sits a randomised, stratified practice test drawn from original questi
 
 **Testing without real content:** `node scripts/build-synthetic-seed.mjs` writes a throwaway bank into `docs/tmp` plus its own cleanup. The questions are **transparently fake and contain no aviation claims**, because an approved row is servable to a student and the harm in unreviewed content is a wrong fact. Seed, test, delete, and check the bank reads zero. `scripts/check-assembly.mjs` exercises the selection logic with no database at all.
 
-**What is not built yet:** readiness scoring (the columns exist and stay null), figures rendered inline rather than referenced by number, an admin page over `getBankHealth()`, and any authoring or review pipeline for the questions themselves. **The bank is empty.** Roughly 600 approved questions would give one student ten non-repeating full tests; about 180 makes a usable first release.
+### Readiness — `src/lib/practice/readiness.ts`
+
+Computed per ACS code, rolled up per knowledge area, weighted by how much of the real test each area is. **Never from a single attempt's raw score.** Stamped onto the attempt at submit so history shows what was believed at the time. **Verified Sep 23 2026** by five fixtures in `scripts/check-readiness.mjs` and on the live site against the synthetic bank.
+
+- **No number without coverage.** Fewer than 3 answered questions in an area and that area reports `insufficient_data`; if any area is short, the overall score is **null** — not a number with a caveat, which students read as a number.
+- **The recommendation is gated separately from the score.** Any single area below 70% blocks a booking recommendation however good the average looks. The fixture that proves it reads 88% overall and still says "Not yet — one weak area is enough to fail".
+- **A known weak area is named even while the overall picture is thin.** Found on the live site: a student at 23% in one area with one or two answers elsewhere was being told only "not enough practice yet", which reads as "nothing is wrong". Refusing to call someone ready and refusing to warn them are different things. That case is now a fixture.
+- **Recent answers count for more**, on a 30-day half-life, so a fortnight of real work is not buried under early mistakes.
+- **Overall confidence is the weakest area's, not an average.** Nine strong areas and four untouched is not moderate evidence about the test; it is no evidence about a third of it.
+- **A ready student is still pointed at their CFI**, because the endorsement is theirs to give.
+- **Quick tests cannot mature a readiness score, and that is deliberate** (founder, Sep 23 2026). The smallest areas are one question in sixty and round to zero on a 20-question test, so full-length tests are what build coverage. The copy says so rather than leaving a student wondering why the number never appears.
+
+**What is not built yet:** figures rendered inline rather than referenced by number, an admin page over `getBankHealth()`, and any authoring or review pipeline for the questions themselves. Rule 6 of the spec is half-built: a weak code links to its lesson, but the weak area is **not** preloaded into the tutor's `masteryNotes` — that needs a change to the AI instructor, which this build was told not to touch. **The bank is empty.** Roughly 600 approved questions would give one student ten non-repeating full tests; about 180 makes a usable first release.
 
 ---
 
