@@ -10,7 +10,8 @@ export const metadata = {
 const ERROR_MESSAGES: Record<string, string> = {
   auth_failed:
     "That confirmation link did not work. It may have expired or already been used — sign up again to get a fresh one.",
-  missing_code: "That link looks incomplete. Open the most recent email we sent you.",
+  missing_code:
+    "That link looks incomplete. Open the most recent email we sent you.",
   not_configured: SUPABASE_SETUP_MESSAGE,
 };
 
@@ -46,6 +47,16 @@ export default async function LogInPage({
         pendingLabel="Logging in…"
         next={next}
       />
+
+      <p className="text-muted-foreground text-sm">
+        Forgot your password?{" "}
+        <Link
+          href="/forgot-password"
+          className="text-foreground font-medium underline"
+        >
+          Reset it
+        </Link>
+      </p>
 
       <p className="text-muted-foreground text-sm">
         New here?{" "}

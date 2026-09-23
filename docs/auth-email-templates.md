@@ -55,6 +55,54 @@ A confirmation email triggered from somewhere other than our `signUp` — resend
 
 ---
 
+## Reset password
+
+### Why it must be changed
+
+Exactly the same reason as Confirm signup. The default `{{ .ConfirmationURL }}` is a PKCE link, so a student who asks for a reset on their phone and opens the email in their mail app's browser gets "link did not work" — and this is worse than the signup case, because a student resetting their password is already locked out and has no other way in.
+
+### Template to paste into Supabase (Authentication → Email Templates → Reset Password)
+
+```html
+<h2>Set a new password</h2>
+
+<p>Follow the link below to choose a new password. It works once, and it expires.</p>
+<p><a href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=recovery">Set a new password</a></p>
+
+<p>If you did not ask for this, you can ignore this email — your password stays as it is.</p>
+```
+
+### Default template (rollback to this only if the change itself breaks something)
+
+```html
+<h2>Reset Password</h2>
+
+<p>Follow this link to reset the password for your user:</p>
+<p><a href="{{ .ConfirmationURL }}">Reset Password</a></p>
+```
+
+### What the link resolves to
+
+`{{ .RedirectTo }}` is what `requestPasswordReset` passed, so:
+
+```
+https://pilotpathway.vercel.app/auth/callback?next=%2Freset-password&token_hash=<hash>&type=recovery
+```
+
+The callback already accepts `recovery` as an OTP type — it needed no change. It verifies the token, which establishes a session, and redirects to `/reset-password`, where the student sets the new password.
+
+**`type=recovery` is not interchangeable with `type=email`.** The callback validates the value against Supabase's list and refuses anything else.
+
+### The same load-bearing coupling
+
+`requestPasswordReset` always passes `?next=/reset-password`, so `{{ .RedirectTo }}` always carries a query string and the template's `&token_hash=` is valid. Do not make that conditional.
+
+### Why no current password is asked for
+
+The person setting the password is, by definition, someone who does not have the old one. Possession of the single-use, short-lived link is what authorises the change — the same standard as the confirmation link.
+
+---
+
 ## Other templates
 
-Not currently customised and not currently used: magic link, change email address, reset password. The app has no password-reset flow yet. If one is added, that template needs the same `token_hash` treatment.
+Not currently customised and not currently used: magic link, change email address. If either is ever used, it needs the same `token_hash` treatment.

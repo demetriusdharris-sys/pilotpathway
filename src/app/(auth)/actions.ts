@@ -164,3 +164,100 @@ export async function signOut() {
   revalidatePath("/", "layout");
   redirect("/login");
 }
+
+/**
+ * Starts a password reset.
+ *
+ * Always answers the same way, whether or not the address has an account. The
+ * signup flow goes to some trouble not to reveal which emails are registered —
+ * Supabase returns a decoy user for that reason — and a reset form that said
+ * "no account with that email" would hand over the same fact for free.
+ *
+ * `redirectTo` points at the existing callback, which already understands a
+ * recovery link, and carries `next=/reset-password` so the student lands on
+ * the form that sets the new password rather than on a dashboard they did not
+ * ask for.
+ */
+export async function requestPasswordReset(
+  _prevState: AuthState,
+  formData: FormData,
+): Promise<AuthState> {
+  if (!getSupabaseEnv()) {
+    return { error: SUPABASE_SETUP_MESSAGE };
+  }
+
+  const email = String(formData.get("email") ?? "").trim();
+
+  if (!email) {
+    return { error: "Enter the email address you signed up with." };
+  }
+
+  const supabase = await createClient();
+  const origin = (await headers()).get("origin");
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${origin}/auth/callback?next=${encodeURIComponent("/reset-password")}`,
+  });
+
+  // Rate limiting is worth reporting, because the student can act on it. Every
+  // other failure is logged and answered with the same neutral message.
+  if (error) {
+    if (error.message.toLowerCase().includes("rate limit")) {
+      return { error: studentFacingError(error.message) };
+    }
+
+    console.error("Password reset request failed:", {
+      error: error.message,
+    });
+  }
+
+  return {
+    message: `If ${email} has an account, a reset link is on its way. The link works once and expires — open the most recent email.`,
+  };
+}
+
+/**
+ * Sets the new password.
+ *
+ * Reached only with the session the recovery link establishes, so possession
+ * of the link is what authorises the change — the same standard as the
+ * confirmation link, and the reason the link is single-use and short-lived.
+ *
+ * No current password is asked for, because a student resetting their password
+ * is precisely someone who does not have it.
+ */
+export async function setNewPassword(
+  _prevState: AuthState,
+  formData: FormData,
+): Promise<AuthState> {
+  if (!getSupabaseEnv()) {
+    return { error: SUPABASE_SETUP_MESSAGE };
+  }
+
+  const password = String(formData.get("password") ?? "");
+
+  if (password.length < 8) {
+    return { error: "Use at least 8 characters for your password." };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return {
+      error:
+        "That reset link has expired or was already used. Ask for a new one below.",
+    };
+  }
+
+  const { error } = await supabase.auth.updateUser({ password });
+
+  if (error) {
+    return { error: studentFacingError(error.message) };
+  }
+
+  revalidatePath("/", "layout");
+  redirect("/dashboard");
+}
