@@ -160,6 +160,31 @@ Explicitly out of scope for that sprint: VR, live flight-school booking, full me
 
 ---
 
+## Beta readiness — Sep 23 2026
+
+**Password reset**, `/forgot-password` → recovery email → `/reset-password`. **Verified on the live site Sep 23 2026 by resetting a password on a phone**, which is the case the design exists for. The callback already accepted `recovery` as an OTP type, so no code changed there. **The Supabase Reset Password template had to change to `{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=recovery`** for exactly the reason the signup template did — the default is a PKCE link that only works in the browser that asked for the reset, and a locked-out student on a phone has no other way in. Both templates are recorded in `docs/auth-email-templates.md`.
+
+- **The reset form answers identically whether or not the address has an account.** Signup goes to trouble not to reveal which emails are registered; a reset form saying "no such account" would give away the same fact for free. Only a rate-limit error is reported, because a student can act on that one.
+- **No current password is asked for.** The person resetting is by definition someone who does not have it; possession of the single-use, short-lived link is the authorisation.
+- **`requestPasswordReset` always passes `?next=/reset-password`**, which is what makes the template's `&token_hash=` valid. Same load-bearing coupling as signup — do not make it conditional.
+- **`/reset-password` with no session says the link expired and offers a new one**, rather than rendering a form that would fail on submit.
+
+**Legal pages and a contact route:** `/privacy`, `/terms`, `/contact`, linked from the home page footer, both auth screens, and a line on the signup form. **PilotPathway.ai is a project of Equity Engine, a 501(c)(3) fiscal sponsor**, which is the entity named as accountable. The published address is `demetrius@pilotpathway.ai`, confirmed to receive mail Sep 23 2026.
+
+- **The policy describes what the code does**, not what a template says. Every claim points at a table or a route, including that tutor conversations are sent to Anthropic and what deleting an account does not reach.
+- **It names the two unsettled questions in a section of their own** — whether a record of consent should survive deletion, and whether the guardian action record should identify the student — with what is true today for each. **Neither page has been reviewed by a lawyer, and Equity Engine should review both before a real beta.**
+- **Contact is a published address, not a form.** A form needs delivery, spam handling and a reply path, each of which can fail silently, leaving a student who reported a wrong regulation believing they were heard.
+
+**Error pages:** `src/app/error.tsx`, `global-error.tsx`, `not-found.tsx`. **Verified on the live site Sep 23 2026** with a temporary throwing route, since deleted: the error page rendered with reference `3100928808`, and searching that string in the Vercel runtime logs found the matching entry.
+
+- **The reference code is the feature.** It is Next's `digest`, which is also written to the server log, so a student quoting it makes an otherwise unsearchable "it broke yesterday" findable. Vercel keeps runtime logs briefly and nobody watches them live, so without it a beta report is unactionable.
+- **The error page never guesses what went wrong.** Telling a student to check their connection sends them chasing a fault that is ours.
+- **`global-error.tsx` uses a plain `<a>`, with the lint rule disabled and a comment saying why.** `next/link` needs the router, and the router is inside the layout that just failed.
+
+**Still open before a beta:** the CFI review (no approved cards, so no quiz and no mastery data), the two lawyer questions, and Equity Engine's review of the legal pages. Not blocking: school admin screens, cohorts, per-objective teacher detail, Stage 2 and 3 content.
+
+---
+
 ## Architectural debt (deliberate, not yet paid)
 
 **1. Lesson content was hardcoded — paid for the founder, Sep 16 2026; still owed for CFIs.** Stages, lessons and objectives now live in the database and the founder edits them in the Supabase Table Editor with no code change and no deploy (see "Curriculum content" below). What is still owed: a CFI cannot edit content, because that needs an in-app editor with permissions, and edits go live with no review step. Both belong together — build the review step at the same time CFIs get editing access.
