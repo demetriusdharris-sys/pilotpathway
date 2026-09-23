@@ -30,9 +30,7 @@ function answersFor({ area, code, count, correct, daysAgo = 1 }) {
       knowledgeArea: area,
       objectiveId: "s1-weather-intro.metar-and-taf",
       isCorrect: i < correct,
-      answeredAt: new Date(
-        NOW.getTime() - daysAgo * 86_400_000,
-      ).toISOString(),
+      answeredAt: new Date(NOW.getTime() - daysAgo * 86_400_000).toISOString(),
     });
   }
   return answers;
@@ -155,15 +153,39 @@ check(
 // better than the reverse.
 const improving = computeReadiness(
   [
-    ...answersFor({ area: "Regulations", code: "PA.REG.K1", count: 10, correct: 2, daysAgo: 120 }),
-    ...answersFor({ area: "Regulations", code: "PA.REG.K1", count: 10, correct: 9, daysAgo: 2 }),
+    ...answersFor({
+      area: "Regulations",
+      code: "PA.REG.K1",
+      count: 10,
+      correct: 2,
+      daysAgo: 120,
+    }),
+    ...answersFor({
+      area: "Regulations",
+      code: "PA.REG.K1",
+      count: 10,
+      correct: 9,
+      daysAgo: 2,
+    }),
   ],
   NOW,
 );
 const declining = computeReadiness(
   [
-    ...answersFor({ area: "Regulations", code: "PA.REG.K1", count: 10, correct: 9, daysAgo: 120 }),
-    ...answersFor({ area: "Regulations", code: "PA.REG.K1", count: 10, correct: 2, daysAgo: 2 }),
+    ...answersFor({
+      area: "Regulations",
+      code: "PA.REG.K1",
+      count: 10,
+      correct: 9,
+      daysAgo: 120,
+    }),
+    ...answersFor({
+      area: "Regulations",
+      code: "PA.REG.K1",
+      count: 10,
+      correct: 2,
+      daysAgo: 2,
+    }),
   ],
   NOW,
 );
@@ -176,6 +198,57 @@ check(
   (improvingArea?.percent ?? 0) > (decliningArea?.percent ?? 100),
   `improving read ${improvingArea?.percent}% and declining read ${decliningArea?.percent}% — recent answers are not weighted more`,
 );
+
+// --- 5. Thin overall, but one area already measurably weak -------------
+// Seen on the live site Sep 23 2026: a student had 22 answers in one area at
+// 23% and one or two answers everywhere else. The overall verdict is honestly
+// "too early", but staying silent about the weak area tells them nothing is
+// wrong.
+const thinButWeak = computeReadiness(
+  [
+    ...answersFor({
+      area: "Airspace and navigation",
+      code: "PA.NAV.K1",
+      count: 22,
+      correct: 5,
+    }),
+    ...answersFor({
+      area: "Regulations",
+      code: "PA.REG.K1",
+      count: 1,
+      correct: 1,
+    }),
+    ...answersFor({
+      area: "Weight and balance",
+      code: "PA.WEI.K1",
+      count: 1,
+      correct: 1,
+    }),
+  ],
+  NOW,
+);
+const thinButWeakWords = readinessHeadline(thinButWeak);
+
+check(
+  "thin-but-weak",
+  thinButWeak.recommendation === "not_enough_data",
+  `recommendation was ${thinButWeak.recommendation}`,
+);
+check(
+  "thin-but-weak",
+  thinButWeak.score === null,
+  `score was ${thinButWeak.score} — still no number without coverage`,
+);
+check(
+  "thin-but-weak",
+  thinButWeakWords.detail.includes("Airspace and navigation"),
+  "a known weak area was not surfaced while the overall picture was thin",
+);
+
+console.log(
+  `  thin + weak    → ${thinButWeak.recommendation}, surfaced: ${thinButWeak.blockingAreas.map((a) => a.area).join(", ")}`,
+);
+console.log(`     headline: "${thinButWeakWords.title}"`);
 
 console.log("check-readiness: three fixture students");
 console.log(

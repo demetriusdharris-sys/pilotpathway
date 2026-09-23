@@ -262,12 +262,26 @@ export function readinessHeadline(report: ReadinessReport): {
 } {
   if (report.recommendation === "not_enough_data") {
     const missing = report.areasNeedingData.length;
+
+    // Deliberately asymmetric. We refuse to call anyone ready without
+    // coverage of every area — but the moment an area is measurably weak, we
+    // say so, even while the overall picture is thin. Withholding a known
+    // problem because other areas are under-tested tells a student nothing is
+    // wrong, which is the opposite of true.
+    if (report.blockingAreas.length > 0) {
+      const names = report.blockingAreas.map((area) => area.area).join(", ");
+      return {
+        title: "Too early to judge overall — but one area already looks weak",
+        detail: `There is not enough practice across every area to give you a readiness score yet. What we can already see: ${names} ${report.blockingAreas.length === 1 ? "is" : "are"} below ${AREA_PASS_PERCENT}%. That is worth working on now rather than after another test.`,
+      };
+    }
+
     return {
       title: "Not enough practice yet to say",
       detail:
         missing === 1
-          ? `One knowledge area still needs at least ${MINIMUM_ANSWERS_PER_AREA} answered questions before we can tell you anything useful.`
-          : `${missing} knowledge areas still need at least ${MINIMUM_ANSWERS_PER_AREA} answered questions each. We would rather say nothing than guess at this.`,
+          ? `One knowledge area still needs at least ${MINIMUM_ANSWERS_PER_AREA} answered questions before we can tell you anything useful. A full-length test covers every area at once.`
+          : `${missing} knowledge areas still need at least ${MINIMUM_ANSWERS_PER_AREA} answered questions each. A full-length test covers every area at once — quick tests skip the smallest ones. We would rather say nothing than guess at this.`,
     };
   }
 
