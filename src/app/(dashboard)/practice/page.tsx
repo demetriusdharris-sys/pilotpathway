@@ -8,6 +8,10 @@ import {
   loadAttemptHistory,
   PASSING_PERCENT,
 } from "@/lib/practice/attempts";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { loadReadiness, type ReadinessReport } from "@/lib/practice/readiness";
+import { findLessonStageSlug } from "@/lib/curriculum-store";
+import { ReadinessPanel } from "@/components/readiness-panel";
 import { PracticeStartForm } from "@/components/practice-start-form";
 import { SignOutButton } from "@/components/sign-out-button";
 
@@ -40,6 +44,33 @@ export default async function PracticePage() {
     getBankHealth(supabase),
     loadAttemptHistory(supabase, user.id),
   ]);
+
+  // Readiness needs is_correct, which students are not granted — so it reads
+  // with the service role, scoped to this one student.
+  const admin = createAdminClient();
+  let readiness: ReadinessReport | null = null;
+  const lessonLinks: Record<string, string> = {};
+
+  if (admin) {
+    try {
+      readiness = await loadReadiness(admin, user.id);
+
+      // Only for the handful of weak codes actually shown, so a readiness
+      // panel never turns into a curriculum-wide query.
+      for (const code of readiness.weakCodes.slice(0, 5)) {
+        if (!code.lessonSlug || lessonLinks[code.lessonSlug]) continue;
+
+        const stage = await findLessonStageSlug(supabase, code.lessonSlug);
+        if (stage) lessonLinks[code.lessonSlug] = stage;
+      }
+    } catch (error) {
+      // No panel is better than a made-up number.
+      console.error("Failed to compute readiness:", {
+        userId: user.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
 
   const approved = health.reduce((total, entry) => total + entry.approved, 0);
   const areasWithQuestions = health
@@ -85,6 +116,10 @@ export default async function PracticePage() {
           hours, and passes at {PASSING_PERCENT}%. No two practice tests here
           are the same, and questions you got wrong come back later on purpose.
         </p>
+
+        {readiness && history.some((attempt) => attempt.completedAt) ? (
+          <ReadinessPanel report={readiness} lessonLinks={lessonLinks} />
+        ) : null}
 
         {approved === 0 ? (
           <section className="border-gold/40 bg-gold/10 mt-8 rounded-lg border p-6">

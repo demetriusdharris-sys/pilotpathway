@@ -5,6 +5,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getSupabaseEnv } from "@/lib/supabase/env";
 import { loadResult, PASSING_PERCENT } from "@/lib/practice/attempts";
 import { Button } from "@/components/ui/button";
+import { loadReadiness } from "@/lib/practice/readiness";
+import { findLessonStageSlug } from "@/lib/curriculum-store";
+import { ReadinessPanel } from "@/components/readiness-panel";
 
 export const metadata = {
   title: "Your result — PilotPathway.ai",
@@ -36,6 +39,18 @@ export default async function PracticeResultPage({
 
   if (!result) notFound();
 
+  // Deliberately computed across every test this student has taken, not from
+  // the one they just sat: a single attempt's percentage is the number this
+  // whole module exists to stop them acting on.
+  const readiness = await loadReadiness(admin, user.id);
+  const lessonLinks: Record<string, string> = {};
+
+  for (const code of readiness.weakCodes.slice(0, 5)) {
+    if (!code.lessonSlug || lessonLinks[code.lessonSlug]) continue;
+    const stage = await findLessonStageSlug(supabase, code.lessonSlug);
+    if (stage) lessonLinks[code.lessonSlug] = stage;
+  }
+
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-10">
       <Link
@@ -60,6 +75,8 @@ export default async function PracticeResultPage({
           evidence either way.
         </p>
       </section>
+
+      <ReadinessPanel report={readiness} lessonLinks={lessonLinks} />
 
       {/* Laid out like the Airman Knowledge Test Report, which is the document
           a student hands their examiner. Recognising the format before test

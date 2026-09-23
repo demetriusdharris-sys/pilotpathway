@@ -11,6 +11,7 @@ import {
   submitAttempt,
   type PracticeMode,
 } from "@/lib/practice/attempts";
+import { loadReadiness } from "@/lib/practice/readiness";
 import type { AuthState } from "@/app/(auth)/actions";
 
 const MODES: readonly PracticeMode[] = ["full_60", "quick_20", "targeted"];
@@ -141,6 +142,31 @@ export async function submitPracticeTest(
 
   try {
     await submitAttempt(session.admin, session.user.id, attemptId);
+
+    // Readiness is recomputed from every answer this student has ever given,
+    // not from this attempt — but it is stamped on the attempt so the history
+    // shows what we believed at the time rather than re-deriving it later
+    // against a different bank.
+    const readiness = await loadReadiness(session.admin, session.user.id);
+
+    const { error: stampError } = await session.admin
+      .from("practice_attempts")
+      .update({
+        readiness_score: readiness.score,
+        readiness_confidence: readiness.confidence,
+      })
+      .eq("id", attemptId)
+      .eq("user_id", session.user.id);
+
+    if (stampError) {
+      // The test is submitted and scored; a missing readiness stamp is worth
+      // a log line, not an error page that suggests the answers were lost.
+      console.error("Could not record readiness for an attempt:", {
+        userId: session.user.id,
+        attemptId,
+        error: stampError.message,
+      });
+    }
   } catch (error) {
     if (error instanceof PracticeError) {
       return { error: error.message };
