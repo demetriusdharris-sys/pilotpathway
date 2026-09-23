@@ -105,6 +105,12 @@ export default async function DashboardPage() {
               </Link>
             ) : null}
             <Link
+              href="/practice"
+              className="text-muted-foreground hover:text-foreground text-sm font-medium underline-offset-4 hover:underline"
+            >
+              Practice tests
+            </Link>
+            <Link
               href="/profile"
               className="text-muted-foreground hover:text-foreground text-sm font-medium underline-offset-4 hover:underline"
             >
