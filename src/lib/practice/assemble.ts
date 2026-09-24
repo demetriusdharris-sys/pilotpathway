@@ -248,6 +248,32 @@ function selectForArea(
 }
 
 /** Scales the blueprint to a shorter test, keeping the shape. */
+/**
+ * Can the bank fill this blueprint, area by area?
+ *
+ * A test that silently leaves out regulations or weather is worse than no
+ * test, so both whole-test modes are refused rather than quietly shortened.
+ * The rule lives here, next to the blueprint it depends on, and is used for
+ * the full test and the quick test alike — they differ only in their
+ * blueprint, and having two copies of the rule is how the quick test came to
+ * be offered on four questions in one area.
+ *
+ * Areas with no slots are skipped: at the quick test's size the smallest areas
+ * round to zero, which is why a quick test cannot mature a readiness score.
+ */
+export function canFillBlueprint(
+  health: readonly { area: string; approved: number }[],
+  blueprint: readonly { area: string; slots: number }[],
+): boolean {
+  const approvedByArea = new Map(
+    health.map((entry) => [entry.area, entry.approved] as const),
+  );
+
+  return blueprint
+    .filter((entry) => entry.slots > 0)
+    .every((entry) => (approvedByArea.get(entry.area) ?? 0) >= entry.slots);
+}
+
 export function scaleBlueprint(
   blueprint: readonly { area: string; slots: number }[],
   total: number,

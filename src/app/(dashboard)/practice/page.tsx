@@ -2,7 +2,14 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getSupabaseEnv } from "@/lib/supabase/env";
-import { getBankHealth, FULL_TEST_QUESTIONS } from "@/lib/practice/assemble";
+import {
+  getBankHealth,
+  canFillBlueprint,
+  scaleBlueprint,
+  FULL_TEST_QUESTIONS,
+  QUICK_TEST_QUESTIONS,
+  TEST_BLUEPRINT,
+} from "@/lib/practice/assemble";
 import {
   FULL_TEST_MINUTES,
   loadAttemptHistory,
@@ -77,11 +84,14 @@ export default async function PracticePage() {
     .filter((entry) => entry.approved > 0)
     .map((entry) => entry.area);
 
-  // A full test needs every area filled; anything less would be a test that
-  // silently leaves out regulations or weather, which is worse than no test.
-  const canSitFullTest = health
-    .filter((entry) => entry.slots > 0)
-    .every((entry) => entry.approved >= entry.slots);
+  // Both whole-test modes are gated by the same rule, differing only in their
+  // blueprint. A quick test needs less per area, so it opens earlier — but it
+  // still has to cover the spread it promises the student.
+  const canSitFullTest = canFillBlueprint(health, TEST_BLUEPRINT);
+  const canSitQuickTest = canFillBlueprint(
+    health,
+    scaleBlueprint(TEST_BLUEPRINT, QUICK_TEST_QUESTIONS),
+  );
 
   return (
     <main className="flex flex-1 flex-col">
@@ -159,10 +169,22 @@ export default async function PracticePage() {
             <section className="border-border bg-card rounded-lg border p-6">
               <h2 className="text-xl font-semibold">Quick test</h2>
               <p className="text-muted-foreground mt-1 text-sm text-pretty">
-                20 questions, untimed, same spread. Good for a bus ride.
+                {QUICK_TEST_QUESTIONS} questions, untimed, same spread. Good for
+                a bus ride.
               </p>
               <div className="mt-4">
-                <PracticeStartForm mode="quick_20" label="Start a quick test" />
+                {canSitQuickTest ? (
+                  <PracticeStartForm
+                    mode="quick_20"
+                    label="Start a quick test"
+                  />
+                ) : (
+                  <p className="text-muted-foreground text-sm text-pretty">
+                    Not enough approved questions yet to build a quick test
+                    honestly either. Targeted practice below works on the areas
+                    that are ready.
+                  </p>
+                )}
               </div>
             </section>
 

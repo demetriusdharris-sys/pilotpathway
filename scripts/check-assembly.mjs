@@ -12,7 +12,13 @@
 // function expects. That needs approved questions in the bank and is checked
 // on the live site once a CFI has signed the first batch.
 
-import { planTest, TEST_BLUEPRINT } from "../src/lib/practice/assemble.ts";
+import {
+  planTest,
+  canFillBlueprint,
+  scaleBlueprint,
+  TEST_BLUEPRINT,
+  QUICK_TEST_QUESTIONS,
+} from "../src/lib/practice/assemble.ts";
 
 const BANK_PER_AREA = 30;
 const TESTS = 10;
@@ -186,8 +192,60 @@ if (deep.orders.size < 4) {
   );
 }
 
+// ---------------------------------------------------------------
+// Which whole-test modes a bank may offer.
+//
+// The case that matters is the one found on the live site Sep 24 2026: four
+// approved questions in a single area. The quick test was offered on that,
+// having promised the student "20 questions, same spread".
+// ---------------------------------------------------------------
+
+const QUICK_BLUEPRINT = scaleBlueprint(TEST_BLUEPRINT, QUICK_TEST_QUESTIONS);
+
+const oneAreaOnly = TEST_BLUEPRINT.map((entry, index) => ({
+  area: entry.area,
+  approved: index === 0 ? 4 : 0,
+}));
+
+if (canFillBlueprint(oneAreaOnly, QUICK_BLUEPRINT)) {
+  failures.push(
+    "A quick test was offered on four approved questions in one area",
+  );
+}
+
+if (canFillBlueprint(oneAreaOnly, TEST_BLUEPRINT)) {
+  failures.push("A full test was offered on four questions in one area");
+}
+
+const full = TEST_BLUEPRINT.map((entry) => ({
+  area: entry.area,
+  approved: entry.slots,
+}));
+
+if (!canFillBlueprint(full, TEST_BLUEPRINT)) {
+  failures.push("A bank holding exactly the blueprint could not fill a test");
+}
+
+// A quick test must open EARLIER than a full one — it needs fewer per area.
+// If this ever inverts, one of the two blueprints is wrong.
+const quickOnly = TEST_BLUEPRINT.map((entry) => ({
+  area: entry.area,
+  approved: QUICK_BLUEPRINT.find((q) => q.area === entry.area)?.slots ?? 0,
+}));
+
+if (!canFillBlueprint(quickOnly, QUICK_BLUEPRINT)) {
+  failures.push("A bank holding exactly the quick blueprint could not fill it");
+}
+
+if (canFillBlueprint(quickOnly, TEST_BLUEPRINT)) {
+  failures.push("A quick-sized bank was allowed to build a full test");
+}
+
 console.log(
   `check-assembly: ${TESTS} tests of ${thin.served[0].length} questions`,
+);
+console.log(
+  `  gating: quick test needs ${QUICK_BLUEPRINT.filter((e) => e.slots > 0).length} of ${TEST_BLUEPRINT.length} areas covered, full test all ${TEST_BLUEPRINT.length}`,
 );
 console.log(
   `  thin bank (${BANK_PER_AREA}/area): fresh for ${freshRounds} tests, then relaxed in round(s) ${thin.relaxedRounds.join(", ") || "none"}`,
