@@ -3,43 +3,47 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSupabaseEnv } from "@/lib/supabase/env";
+import { isReviewer } from "@/lib/practice/review";
 import {
-  isReviewer,
-  loadReviewCounts,
-  loadReviewQueue,
-} from "@/lib/practice/review";
-import { getBankHealth } from "@/lib/practice/assemble";
-import { QuestionReviewCard } from "@/components/question-review-card";
+  loadCardQueueByLesson,
+  loadCardReviewCounts,
+  loadCardReviewQueue,
+} from "@/lib/card-review";
+import { CardReviewCard } from "@/components/card-review-card";
 import { SignOutButton } from "@/components/sign-out-button";
 
 export const metadata = {
-  title: "Question review — PilotPathway.ai",
+  title: "Quiz card review — PilotPathway.ai",
 };
 
-const STATUSES = ["draft", "needs_changes", "cfi_approved", "retired"] as const;
+const STATUSES = ["draft", "needs_changes", "approved", "retired"] as const;
 
 const STATUS_LABEL: Record<string, string> = {
   draft: "Waiting",
   needs_changes: "Sent back",
-  cfi_approved: "Approved",
+  approved: "Approved",
   retired: "Cut",
 };
 
-export default async function ReviewPage({
+export default async function CardReviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; as?: string }>;
+  searchParams: Promise<{ status?: string; as?: string; lesson?: string }>;
 }) {
   if (!getSupabaseEnv()) redirect("/login");
 
-  const { status: requested, as: reviewerName } = await searchParams;
+  const {
+    status: requested,
+    as: reviewerName,
+    lesson,
+  } = await searchParams;
 
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) redirect("/login?next=/review");
+  if (!user) redirect("/login?next=/review/cards");
 
   // Asked of the database, not inferred from anything the page knows. The
   // action asks again before it writes.
@@ -52,8 +56,8 @@ export default async function ReviewPage({
           Nothing here for this account
         </h1>
         <p className="text-muted-foreground mt-3 text-sm text-pretty">
-          Reviewing practice questions is for flight instructors and
-          administrators. If you are a CFI and should have access, email
+          Reviewing quiz cards is for flight instructors and administrators. If
+          you are a CFI and should have access, email
           demetrius@pilotpathway.ai.
         </p>
         <Link
@@ -69,20 +73,31 @@ export default async function ReviewPage({
   const admin = createAdminClient();
 
   if (!admin) {
-    throw new Error("Question review is unavailable right now.");
+    throw new Error("Card review is unavailable right now.");
   }
 
   const status = STATUSES.includes(requested as (typeof STATUSES)[number])
     ? (requested as string)
     : "draft";
 
-  const [questions, counts, health] = await Promise.all([
-    loadReviewQueue(admin, status),
-    loadReviewCounts(admin),
-    getBankHealth(supabase),
+  const [cards, counts, byLesson] = await Promise.all([
+    loadCardReviewQueue(admin, status, lesson),
+    loadCardReviewCounts(admin),
+    loadCardQueueByLesson(admin, status),
   ]);
 
-  const thinnest = health.filter((entry) => entry.slots > 0).slice(0, 3);
+  const keep = (extra: Record<string, string | undefined>) => {
+    const params = new URLSearchParams();
+    const merged = { status, as: reviewerName, lesson, ...extra };
+    for (const [key, value] of Object.entries(merged)) {
+      if (value) params.set(key, value);
+    }
+    const query = params.toString();
+    return `/review/cards${query ? `?${query}` : ""}`;
+  };
+
+  const reviewed = counts.approved + counts.retired;
+  const total = reviewed + counts.draft + counts.needs_changes;
 
   return (
     <main className="flex flex-1 flex-col">
@@ -110,17 +125,18 @@ export default async function ReviewPage({
         <span className="text-gold-strong text-xs font-semibold tracking-[0.15em] uppercase">
           For flight instructors
         </span>
-        <h1 className="mt-1 text-3xl font-semibold">Question review</h1>
+        <h1 className="mt-1 text-3xl font-semibold">Quiz card review</h1>
         <p className="text-muted-foreground mt-2 text-sm text-pretty">
-          Nothing here has been seen by a student. A question is served only
-          once you approve it, and any later edit to its wording sends it back
-          to this queue automatically.
+          No student has seen any of these. A card appears on its lesson only
+          once you approve it, and if we later change its wording it comes back
+          here automatically — an approval covers the words you read, not the
+          card&rsquo;s name.
         </p>
 
         <p className="text-muted-foreground mt-3 text-sm text-pretty">
-          Reviewing the lesson quiz cards instead?{" "}
+          Reviewing practice test questions instead?{" "}
           <Link
-            href="/review/cards"
+            href="/review"
             className="text-foreground font-medium underline underline-offset-4"
           >
             They are on their own page
@@ -136,8 +152,8 @@ export default async function ReviewPage({
             Your name and certificate number
           </label>
           <p className="text-muted-foreground mt-1 text-xs text-pretty">
-            This is written against every question you approve. It is what makes
-            an approval a person rather than a click.
+            This is written against every card you approve. It is what makes an
+            approval a person rather than a click.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <input
@@ -148,6 +164,9 @@ export default async function ReviewPage({
               className="border-input bg-background focus-visible:ring-ring min-w-0 flex-1 rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
             />
             <input type="hidden" name="status" value={status} />
+            {lesson ? (
+              <input type="hidden" name="lesson" value={lesson} />
+            ) : null}
             <button
               type="submit"
               className="border-border rounded-md border px-3 py-2 text-sm font-medium"
@@ -161,7 +180,7 @@ export default async function ReviewPage({
           {STATUSES.map((entry) => (
             <Link
               key={entry}
-              href={`/review?status=${entry}${reviewerName ? `&as=${encodeURIComponent(reviewerName)}` : ""}`}
+              href={keep({ status: entry, lesson: undefined })}
               className={`rounded-md border px-3 py-1.5 text-sm ${
                 entry === status
                   ? "border-gold-strong bg-gold/10 font-medium"
@@ -176,35 +195,60 @@ export default async function ReviewPage({
           ))}
         </nav>
 
-        {thinnest.length > 0 ? (
-          <p className="text-muted-foreground mt-4 text-xs text-pretty">
-            Thinnest areas by approved questions per slot:{" "}
-            {thinnest
-              .map(
-                (entry) => `${entry.area} (${entry.approved}/${entry.slots})`,
-              )
-              .join(", ")}
-            .
+        {total > 0 ? (
+          <p className="text-muted-foreground mt-4 text-sm tabular-nums">
+            {reviewed} of {total} cards decided.
           </p>
         ) : null}
 
-        {!reviewerName && status === "draft" ? (
+        {/* 144 cards is nobody's single sitting. The lesson list is how a CFI
+            picks up where they left off. */}
+        {byLesson.length > 1 ? (
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Link
+              href={keep({ lesson: undefined })}
+              className={`rounded-md border px-2.5 py-1 text-xs ${
+                lesson ? "border-border" : "border-gold-strong bg-gold/10"
+              }`}
+            >
+              All lessons
+            </Link>
+            {byLesson.map((entry) => (
+              <Link
+                key={entry.lessonSlug}
+                href={keep({ lesson: entry.lessonSlug })}
+                className={`rounded-md border px-2.5 py-1 text-xs ${
+                  lesson === entry.lessonSlug
+                    ? "border-gold-strong bg-gold/10"
+                    : "border-border"
+                }`}
+              >
+                {entry.lessonTitle ?? entry.lessonSlug}{" "}
+                <span className="text-muted-foreground tabular-nums">
+                  {entry.count}
+                </span>
+              </Link>
+            ))}
+          </div>
+        ) : null}
+
+        {!reviewerName && (status === "draft" || status === "needs_changes") ? (
           <p className="border-gold/40 bg-gold/10 mt-6 rounded-md border p-4 text-sm text-pretty">
             Put your name in the box above before approving anything. The server
             refuses an approval without it.
           </p>
         ) : null}
 
-        {questions.length === 0 ? (
+        {cards.length === 0 ? (
           <p className="text-muted-foreground mt-8 text-sm text-pretty">
             Nothing in this queue.
           </p>
         ) : (
           <ul className="mt-8 flex flex-col gap-4">
-            {questions.map((question) => (
-              <QuestionReviewCard
-                key={question.id}
-                question={question}
+            {cards.map((card) => (
+              <CardReviewCard
+                key={card.id}
+                card={card}
                 reviewer={reviewerName ?? ""}
               />
             ))}

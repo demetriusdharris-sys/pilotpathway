@@ -37,7 +37,7 @@ const cards = documents.flatMap((document) => document.cards);
 const cardRows = cards
   .map(
     (c) =>
-      `  (${lit(c.id)}, ${lit(c.objectiveId)}, ${lit(c.lessonSlug)}, ${c.position}, ${lit(c.question)}, ${lit(c.explanation)}, ${lit(c.visual)})`,
+      `  (${lit(c.id)}, ${lit(c.objectiveId)}, ${lit(c.lessonSlug)}, ${c.position}, ${lit(c.question)}, ${lit(c.explanation)}, ${lit(c.visual)}, ${lit(c.flag)})`,
   )
   .join(",\n");
 
@@ -69,6 +69,10 @@ const sql = `-- 0015: sync quiz cards from docs/cards/*.md.
 --     import, the card is knocked back to 'draft' and its reviewer cleared —
 --     an approval covers the words that were reviewed, not the id.
 --
+-- It also carries each card's FLAG FOR CFI line into author_note, so the review
+-- page can show a CFI the doubt we wrote down rather than losing it. A NEW or
+-- CHANGED flag resets the review; a REMOVED one does not. Requires 0029.
+--
 -- Cards that have disappeared from the markdown are retired, not deleted, so
 -- a cut card stops reaching students without erasing that it existed.
 --
@@ -81,11 +85,12 @@ create temp table incoming_cards (
   position integer not null,
   question text not null,
   explanation text not null,
-  visual_description text
+  visual_description text,
+  author_note text
 );
 
 insert into incoming_cards
-  (id, objective_id, lesson_slug, position, question, explanation, visual_description)
+  (id, objective_id, lesson_slug, position, question, explanation, visual_description, author_note)
 values
 ${cardRows};
 
@@ -130,9 +135,17 @@ $check$;
 -- Cards. Content is overwritten; a content change resets the review.
 -- ---------------------------------------------------------------
 
+-- A NEW OR CHANGED FLAG ALSO RESETS THE REVIEW, but a REMOVED one does not.
+-- The asymmetry is the point. A doubt added after an approval is a doubt the
+-- reviewer never saw, so their approval no longer covers the card. A doubt
+-- that disappeared is one they answered, and un-approving the card for that
+-- would punish answering it — and loop forever, since the answer is what
+-- removed it. Hence the "excluded.author_note is not null" guard rather than a
+-- bare "is distinct from".
+
 insert into public.quiz_cards
-  (id, objective_id, lesson_slug, position, question, explanation, visual_description, status)
-select id, objective_id, lesson_slug, position, question, explanation, visual_description, 'draft'
+  (id, objective_id, lesson_slug, position, question, explanation, visual_description, author_note, status)
+select id, objective_id, lesson_slug, position, question, explanation, visual_description, author_note, 'draft'
 from incoming_cards
 on conflict (id) do update set
   objective_id       = excluded.objective_id,
@@ -141,11 +154,14 @@ on conflict (id) do update set
   question           = excluded.question,
   explanation        = excluded.explanation,
   visual_description = excluded.visual_description,
+  author_note        = excluded.author_note,
   updated_at         = now(),
   status = case
     when public.quiz_cards.question is distinct from excluded.question
       or public.quiz_cards.explanation is distinct from excluded.explanation
       or public.quiz_cards.visual_description is distinct from excluded.visual_description
+      or (excluded.author_note is not null
+          and public.quiz_cards.author_note is distinct from excluded.author_note)
     then 'draft'
     else public.quiz_cards.status
   end,
@@ -153,6 +169,8 @@ on conflict (id) do update set
     when public.quiz_cards.question is distinct from excluded.question
       or public.quiz_cards.explanation is distinct from excluded.explanation
       or public.quiz_cards.visual_description is distinct from excluded.visual_description
+      or (excluded.author_note is not null
+          and public.quiz_cards.author_note is distinct from excluded.author_note)
     then null
     else public.quiz_cards.reviewed_by
   end,
@@ -160,6 +178,8 @@ on conflict (id) do update set
     when public.quiz_cards.question is distinct from excluded.question
       or public.quiz_cards.explanation is distinct from excluded.explanation
       or public.quiz_cards.visual_description is distinct from excluded.visual_description
+      or (excluded.author_note is not null
+          and public.quiz_cards.author_note is distinct from excluded.author_note)
     then null
     else public.quiz_cards.reviewed_at
   end;
@@ -168,9 +188,12 @@ on conflict (id) do update set
 -- Options. Changed option text also invalidates a review.
 -- ---------------------------------------------------------------
 
+-- A card already sent back also returns to 'draft' when its options change:
+-- the author has acted on the note, so it belongs in the waiting queue again
+-- rather than sitting under "sent back" looking untouched.
 update public.quiz_cards c
 set status = 'draft', reviewed_by = null, reviewed_at = null, updated_at = now()
-where c.status = 'approved'
+where c.status in ('approved', 'needs_changes')
   and exists (
     select 1
     from incoming_options i
