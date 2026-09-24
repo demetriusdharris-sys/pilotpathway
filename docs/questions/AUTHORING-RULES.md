@@ -48,6 +48,14 @@ Not just why the right answer is right. **Why each wrong one is wrong**, in a se
 
 This is also the single best defence against a bad distractor: if you cannot write a sentence explaining why an option is wrong, it is not a real distractor.
 
+## 4a. Never name a choice by its letter — not in the explanation, not in the stem.
+
+Choice order is **shuffled for every attempt**, and the permutation is stored per answer. The letter a student sees is not the letter you wrote. "B is wrong because…" is therefore wrong itself for most attempts, and it is wrong in the worst possible place: the explanation shown after grading, to a student who got it wrong and is trying to work out why.
+
+Describe the idea instead. "Treating an analysis as a forecast is how a pilot plans for weather that has already moved on" says which option it means without naming it, and reads better than a letter would.
+
+**The importer refuses a question that breaks this.** The first 24 questions written for this bank all broke it — including the five written to prove the pipeline worked — which is why it is a check rather than a rule to remember. The check knows that "Class B is…" is correct aviation prose and leaves it alone.
+
 ## 5. No number you are not certain of. No exceptions for "it's in the handbook".
 
 Airspeeds, distances, weather minimums, cloud clearances, weights, times. If it varies by aircraft, or you are not certain, write **`[CFI: confirm value]`** and leave the gap.
@@ -80,7 +88,11 @@ Editing an approved question **automatically returns it to draft** and clears th
 
 ## The file format
 
-One file per batch, named after what it covers, in `docs/questions/`. A batch is **twenty questions by ACS code**, not a scattering across the syllabus — a reviewer working through one area at a time is a reviewer who finishes.
+One file per batch, named after what it covers, in `docs/questions/`. A batch is **one knowledge area, sized to what that area needs** — three times its slot count in `TEST_BLUEPRINT`, so weather's 8 slots want 24 questions and accident reporting's 1 wants 3. Not a scattering across the syllabus: a reviewer working through one area at a time is a reviewer who finishes.
+
+**Vary which letter is correct.** It does not reach students — order is shuffled at serve time — but a reviewer reading twenty questions whose answer is always the first option stops reading the distractors, and the distractors are where the errors hide. The first draft of the weather batch had 22 of 24 on `A`.
+
+**Do not write two questions on the same fact.** Eight of the weather area's questions are served per full test, so a duplicate can appear twice on one paper. Check the existing batch for the area before adding to it — the first weather batch and its companion each asked about dewpoint spread and about structural icing conditions before that was caught.
 
 ````markdown
 # Questions — <knowledge area>, <what the batch covers>

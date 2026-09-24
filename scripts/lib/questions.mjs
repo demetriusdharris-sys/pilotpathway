@@ -101,6 +101,36 @@ function parseQuestion(block, file, knowledgeArea) {
     throw new Error(`${where} marks ${correct} correct, but has no such choice`);
   }
 
+  // An explanation must not name a choice by its letter.
+  //
+  // The practice engine shuffles choice order for every attempt and stores the
+  // permutation per answer, so the letter a student sees is not the letter
+  // written here. "B is wrong because..." is therefore wrong itself for most
+  // attempts — and it is wrong in the worst place, the explanation shown after
+  // grading to a student who got it wrong and is trying to understand why.
+  //
+  // Refused here rather than left as a rule to remember: the first 24 questions
+  // written for this bank all broke it, including the five written to prove the
+  // pipeline worked. Describe the wrong idea instead of labelling it.
+  // The lookbehind matters more than it looks: "Class B is the one place you
+  // need a clearance" is correct aviation prose, and the airspace and
+  // regulations batches are full of it. Without the exclusions this check would
+  // start rejecting good questions, which is how a useful check gets deleted.
+  const letterReference =
+    /\b(?:option|choice|answer)\s+[ABC]\b|(?<!\b(?:Class|Category|Group|Type|Grade|Part|Appendix|Phase|Stage)\s)\b[ABC]\s+(?:is|was|would be|describes|confuses|states|has)\b/;
+
+  for (const [label, text] of [
+    ["explanation", explanation],
+    ["question", stem],
+  ]) {
+    const match = text.match(letterReference);
+    if (match) {
+      throw new Error(
+        `${where}: the ${label} refers to a choice by letter ("${match[0]}"). Choice order is shuffled per attempt, so the student's letters differ from these — describe the idea instead.`,
+      );
+    }
+  }
+
   // "Figure 12 · CT-8080-2H" — the edition travels with the number, because a
   // figure number alone stops being checkable the moment the supplement
   // revises.
