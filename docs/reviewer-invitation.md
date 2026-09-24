@@ -6,15 +6,11 @@ A template for handing the review queue to a flight instructor. Kept in the repo
 
 1. Check the newest Vercel deployment says **Ready**. A link clicked before a deploy lands can stick as a 404 for that person.
 2. Send the message. **Do not include the review link yet** — the account has to exist before you can grant access, and a reviewer who opens the link early sees "Nothing here for this account" and reasonably assumes it is broken.
-3. When they tell you they have signed up and confirmed their email, run:
+3. When they tell you they have signed up and confirmed their email, go to **`/admin`** → **Reviewer access**, type their address, and press **Give reviewer access**. It takes seconds and needs no SQL.
 
-   ```sql
-   update public.profiles set role = 'mentor'
-   where lower(email) = 'their.email@example.com'
-   returning email, role;
-   ```
+   If it says *"No account with that email has finished signing up yet"*, they have not confirmed their email — the profile row does not exist until they do.
 
-   One row reading `mentor`. **0 rows means they have not finished confirming** — the profile row does not exist until then.
+   Removing access again is the button beside it. Every change either way is recorded permanently in `role_grants`, with your email against it.
 4. Reply with the link. A **Review** link also appears in their dashboard header from then on, so they will not need to keep the email.
 
 **Consider verifying their certificate number** against the FAA airman registry yourself. What they type into the app is self-declared, it is never checked, and it goes onto every row they approve — a record a school or a funder may read one day.

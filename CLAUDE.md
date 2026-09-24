@@ -268,6 +268,25 @@ A CFI reviews the 144 quiz cards in the app: status tabs with counts, a lesson l
 
 ---
 
+## Admin — migration `0031` and `/admin`
+
+The operational things that used to need a hand-written SQL statement. Reached from a dashboard link shown when `may_administer()` is true. **Verified on the live site Sep 24 2026:** granting `+test7` reviewer access worked and they appeared under "Who has access", removing it dropped them off, changing the founder's own role was refused, and an unknown address was refused — with both changes recorded in `role_grants` with the actor's email.
+
+What it does: grant or remove reviewer access by email, show both review queue counts, and show bank health per area — `getBankHealth()` had no interface at all before this.
+
+### Locked design decisions
+
+- **The page cannot create an `admin`, change an existing `admin`, change a `school_admin`, or change the caller's own role.** Only `student` and `mentor` are settable, so a compromised admin session cannot mint more of itself, and the one role that can grant roles stays a visible hand-written statement. Self-demotion by misclick is a support problem with no upside.
+- **`role` is still outside the profile write allowlist.** `0031` grants no update on the column to anybody; `set_reviewer_role` is SECURITY DEFINER and checks the caller. `0005`'s column grant is untouched and remains what stops a student PATCHing their own role.
+- **Every role change is recorded in `role_grants`, and the record cannot be deleted or altered** — a `BEFORE DELETE`/`BEFORE UPDATE` trigger that binds the service role too, the same protection as `guardian_actions`. Granting the power to approve safety content is the most consequential thing one account can do to another, and it should not rest on anybody's memory. The insert is in the same transaction as the role change, so there is no untraced grant: if the record cannot be written, the change rolls back.
+- **No foreign keys to `auth.users`, and both emails are copied in.** The record has to outlive both accounts, and an id alone identifies nobody once an account is deleted. Same reasoning as `0019`.
+- **The staff list omits students deliberately.** A screen listing every student by email invites idle browsing of minors' addresses, and nothing on the page needs it — the one write takes an address that was typed in. "No account with that email" is said plainly rather than vaguely, because the usual cause is a reviewer who has not confirmed their email; the page is admin-only, so it reveals nothing to anyone who could not already look.
+- **Organisations, cohorts and `school_admin` are still SQL.** Phase two. No school was waiting on it the week this was built, and a CFI was.
+
+**Handing the queue to a CFI is `docs/reviewer-invitation.md`** — a template kept in the repo so the second and third reviewer get the same explanation as the first. It states plainly that the content was drafted by an AI and names the failure modes that follow, because a reviewer who does not know reads for typos instead of for conditional distractors. **The account must exist before access can be granted**, so the first message deliberately does not include the review link: a reviewer who opens it early sees "Nothing here for this account" and reasonably assumes it is broken.
+
+---
+
 ## Beta readiness — Sep 23 2026
 
 **Password reset**, `/forgot-password` → recovery email → `/reset-password`. **Verified on the live site Sep 23 2026 by resetting a password on a phone**, which is the case the design exists for. The callback already accepted `recovery` as an OTP type, so no code changed there. **The Supabase Reset Password template had to change to `{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=recovery`** for exactly the reason the signup template did — the default is a PKCE link that only works in the browser that asked for the reset, and a locked-out student on a phone has no other way in. Both templates are recorded in `docs/auth-email-templates.md`.
