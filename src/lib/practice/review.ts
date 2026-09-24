@@ -58,6 +58,57 @@ export async function isReviewer(supabase: SupabaseClient): Promise<boolean> {
   return data === true;
 }
 
+/**
+ * The reviewer's name and certificate number, as it should appear against the
+ * content they approve.
+ *
+ * Stored on the profile rather than passed in a URL, because a CFI works
+ * through a queue over weeks and an inconsistent signature on safety content is
+ * worse than a slightly larger schema. Self-declared and never verified — it
+ * grants nothing, since `role` is what decides who may review.
+ *
+ * Fails soft to null: an unreadable credential means the reviewer is asked to
+ * type one, which is the state before this column existed.
+ */
+export async function loadReviewerCredential(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("reviewer_credential")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Could not read reviewer credential:", {
+      userId,
+      error: error.message,
+    });
+    return null;
+  }
+
+  const value = data?.reviewer_credential;
+
+  return typeof value === "string" && value.trim() !== "" ? value.trim() : null;
+}
+
+/** Written with the reviewer's own client — it is their own profile row. */
+export async function saveReviewerCredential(
+  supabase: SupabaseClient,
+  userId: string,
+  credential: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("profiles")
+    .update({ reviewer_credential: credential.trim() || null })
+    .eq("id", userId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
 export async function loadReviewQueue(
   admin: SupabaseClient,
   status: string,

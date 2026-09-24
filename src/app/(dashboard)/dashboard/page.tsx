@@ -6,6 +6,7 @@ import { getProgress, summarize, type ProgressBySlug } from "@/lib/progress";
 import type { Stage } from "@/lib/curriculum";
 import { loadCurriculum } from "@/lib/curriculum-store";
 import { loadStaffOrganizations } from "@/lib/school-roster";
+import { isReviewer } from "@/lib/practice/review";
 import {
   loadAssessableObjectives,
   loadMastery,
@@ -60,6 +61,12 @@ export default async function DashboardPage() {
     });
   }
 
+  // Reviewers get a way in. Until now a CFI needed a URL somebody had emailed
+  // them, and an account with nothing on screen to suggest they had access —
+  // which is a poor welcome for the person the whole queue is waiting on.
+  // isReviewer already fails soft to false, so a bad read shows no link.
+  const canReview = await isReviewer(supabase);
+
   // Every account created before the age gate has no date of birth, and
   // is_adult() treats unknown age as a minor. Nothing else ever sends those
   // students to the profile page, so they would stay unable to approve
@@ -102,6 +109,14 @@ export default async function DashboardPage() {
                 className="text-muted-foreground hover:text-foreground text-sm font-medium underline-offset-4 hover:underline"
               >
                 Your students
+              </Link>
+            ) : null}
+            {canReview ? (
+              <Link
+                href="/review/cards"
+                className="text-muted-foreground hover:text-foreground text-sm font-medium underline-offset-4 hover:underline"
+              >
+                Review
               </Link>
             ) : null}
             <Link

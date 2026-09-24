@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSupabaseEnv } from "@/lib/supabase/env";
-import { isReviewer } from "@/lib/practice/review";
+import { isReviewer, loadReviewerCredential } from "@/lib/practice/review";
+import { setReviewerName } from "../actions";
 import {
   loadCardQueueByLesson,
   loadCardReviewCounts,
@@ -28,15 +29,11 @@ const STATUS_LABEL: Record<string, string> = {
 export default async function CardReviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; as?: string; lesson?: string }>;
+  searchParams: Promise<{ status?: string; lesson?: string }>;
 }) {
   if (!getSupabaseEnv()) redirect("/login");
 
-  const {
-    status: requested,
-    as: reviewerName,
-    lesson,
-  } = await searchParams;
+  const { status: requested, lesson } = await searchParams;
 
   const supabase = await createClient();
   const {
@@ -80,15 +77,20 @@ export default async function CardReviewPage({
     ? (requested as string)
     : "draft";
 
-  const [cards, counts, byLesson] = await Promise.all([
+  const [cards, counts, byLesson, reviewerName] = await Promise.all([
     loadCardReviewQueue(admin, status, lesson),
     loadCardReviewCounts(admin),
     loadCardQueueByLesson(admin, status),
+    loadReviewerCredential(supabase, user.id),
   ]);
 
   const keep = (extra: Record<string, string | undefined>) => {
     const params = new URLSearchParams();
-    const merged = { status, as: reviewerName, lesson, ...extra };
+    const merged: Record<string, string | undefined> = {
+      status,
+      lesson,
+      ...extra,
+    };
     for (const [key, value] of Object.entries(merged)) {
       if (value) params.set(key, value);
     }
@@ -144,34 +146,34 @@ export default async function CardReviewPage({
           .
         </p>
 
-        {/* Identity is carried in the URL rather than stored: a reviewer may be
-            a guest CFI on a borrowed account, and inventing a profile field for
-            it would be a schema change to solve a form problem. */}
-        <form className="border-border bg-card mt-6 rounded-lg border p-4">
-          <label htmlFor="as" className="text-sm font-medium">
+        {/* Kept on the profile, not in the URL. A CFI works a queue over weeks,
+            and "Jane Doe, CFI 1234567" one evening and "J. Doe" the next is an
+            inconsistent signature on safety content. */}
+        <form
+          action={setReviewerName}
+          className="border-border bg-card mt-6 rounded-lg border p-4"
+        >
+          <label htmlFor="credential" className="text-sm font-medium">
             Your name and certificate number
           </label>
           <p className="text-muted-foreground mt-1 text-xs text-pretty">
             This is written against every card you approve. It is what makes an
-            approval a person rather than a click.
+            approval a person rather than a click. Saved to your account, so you
+            only type it once.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <input
-              id="as"
-              name="as"
+              id="credential"
+              name="credential"
               defaultValue={reviewerName ?? ""}
               placeholder="Jane Doe, CFI 1234567"
               className="border-input bg-background focus-visible:ring-ring min-w-0 flex-1 rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
             />
-            <input type="hidden" name="status" value={status} />
-            {lesson ? (
-              <input type="hidden" name="lesson" value={lesson} />
-            ) : null}
             <button
               type="submit"
               className="border-border rounded-md border px-3 py-2 text-sm font-medium"
             >
-              Set
+              Save
             </button>
           </div>
         </form>

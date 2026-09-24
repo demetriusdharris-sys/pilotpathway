@@ -2,7 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { recordReview, type ReviewDecision } from "@/lib/practice/review";
+import {
+  recordReview,
+  saveReviewerCredential,
+  type ReviewDecision,
+} from "@/lib/practice/review";
 import type { AuthState } from "@/app/(auth)/actions";
 
 const DECISIONS: readonly ReviewDecision[] = [
@@ -13,6 +17,39 @@ const DECISIONS: readonly ReviewDecision[] = [
 
 function isDecision(value: string): value is ReviewDecision {
   return (DECISIONS as readonly string[]).includes(value);
+}
+
+/**
+ * Saves how this reviewer should be named against content they approve.
+ *
+ * Shared by both review pages, and used directly as a form action rather than
+ * through useActionState: there is nothing to report but the saved value, which
+ * the re-rendered form shows. That keeps the name box working with no client
+ * JavaScript, which matters on the cheap phones this audience uses.
+ */
+export async function setReviewerName(formData: FormData): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return;
+
+  const credential = String(formData.get("credential") ?? "");
+
+  try {
+    await saveReviewerCredential(supabase, user.id, credential);
+  } catch (error) {
+    // Losing a name is not worth failing the page over — the reviewer is asked
+    // for it again, and no decision can be recorded without one.
+    console.error("Could not save reviewer credential:", {
+      userId: user.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  revalidatePath("/review");
+  revalidatePath("/review/cards");
 }
 
 /**

@@ -7,7 +7,9 @@ import {
   isReviewer,
   loadReviewCounts,
   loadReviewQueue,
+  loadReviewerCredential,
 } from "@/lib/practice/review";
+import { setReviewerName } from "./actions";
 import { getBankHealth } from "@/lib/practice/assemble";
 import { QuestionReviewCard } from "@/components/question-review-card";
 import { SignOutButton } from "@/components/sign-out-button";
@@ -28,11 +30,11 @@ const STATUS_LABEL: Record<string, string> = {
 export default async function ReviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; as?: string }>;
+  searchParams: Promise<{ status?: string }>;
 }) {
   if (!getSupabaseEnv()) redirect("/login");
 
-  const { status: requested, as: reviewerName } = await searchParams;
+  const { status: requested } = await searchParams;
 
   const supabase = await createClient();
   const {
@@ -76,10 +78,11 @@ export default async function ReviewPage({
     ? (requested as string)
     : "draft";
 
-  const [questions, counts, health] = await Promise.all([
+  const [questions, counts, health, reviewerName] = await Promise.all([
     loadReviewQueue(admin, status),
     loadReviewCounts(admin),
     getBankHealth(supabase),
+    loadReviewerCredential(supabase, user.id),
   ]);
 
   const thinnest = health.filter((entry) => entry.slots > 0).slice(0, 3);
@@ -128,31 +131,34 @@ export default async function ReviewPage({
           .
         </p>
 
-        {/* Identity is carried in the URL rather than stored: a reviewer may be
-            a guest CFI on a borrowed account, and inventing a profile field for
-            it would be a schema change to solve a form problem. */}
-        <form className="border-border bg-card mt-6 rounded-lg border p-4">
-          <label htmlFor="as" className="text-sm font-medium">
+        {/* Kept on the profile, not in the URL. A CFI works a queue over weeks,
+            and "Jane Doe, CFI 1234567" one evening and "J. Doe" the next is an
+            inconsistent signature on safety content. */}
+        <form
+          action={setReviewerName}
+          className="border-border bg-card mt-6 rounded-lg border p-4"
+        >
+          <label htmlFor="credential" className="text-sm font-medium">
             Your name and certificate number
           </label>
           <p className="text-muted-foreground mt-1 text-xs text-pretty">
             This is written against every question you approve. It is what makes
-            an approval a person rather than a click.
+            an approval a person rather than a click. Saved to your account, so
+            you only type it once.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <input
-              id="as"
-              name="as"
+              id="credential"
+              name="credential"
               defaultValue={reviewerName ?? ""}
               placeholder="Jane Doe, CFI 1234567"
               className="border-input bg-background focus-visible:ring-ring min-w-0 flex-1 rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
             />
-            <input type="hidden" name="status" value={status} />
             <button
               type="submit"
               className="border-border rounded-md border px-3 py-2 text-sm font-medium"
             >
-              Set
+              Save
             </button>
           </div>
         </form>
@@ -161,7 +167,7 @@ export default async function ReviewPage({
           {STATUSES.map((entry) => (
             <Link
               key={entry}
-              href={`/review?status=${entry}${reviewerName ? `&as=${encodeURIComponent(reviewerName)}` : ""}`}
+              href={`/review?status=${entry}`}
               className={`rounded-md border px-3 py-1.5 text-sm ${
                 entry === status
                   ? "border-gold-strong bg-gold/10 font-medium"
