@@ -34,11 +34,35 @@ More than half of it, and this is the argument for building inside this repo rat
 4. **An event** — a confirmed visit: when it happened, who attended, hours given.
 5. **Sponsor reporting** — quarterly, aggregate.
 
+## What it is FOR — decided by the founder, Sep 24 2026
+
+**The hub is how students get into the ground school.** A pilot speaks at a school or an organisation's event; the students in that room who are interested sign up; they get the free ground school, which prepares them for the written test and eventually for a checkride with a human CFI.
+
+That is not a detail. It decides what to build first and what the schema has to carry:
+
+- **The load-bearing object is the handoff from an event to a signup.** Arranging a pilot to visit a school can be done by email today. What cannot be done today is capturing the students who were in the room. So the smallest useful version of this hub is *event → attribution → signup*, and matching, analytics and leaderboards come after.
+- **Attribution is the business case.** "Your funded visit produced 14 signups, 9 of whom finished Stage 1" is the sentence a sponsor renews on, and it is the only sentence that connects a dollar to an outcome. Nothing in the app can produce it today.
+- **A per-event code or link is the mechanism**, not a school-level one. The event is the unit a sponsor funds and the unit a pilot did the work for, and a code on a slide in the room is what actually happens in a classroom. It has to work on a cheap phone with no app.
+
+### Two lines that must not be crossed
+
+**1. An event code must never be required to sign up.** The core ground school is free to everyone, permanently. If a code is what unlocks access, the funnel has quietly become a paywall and the rule is broken. The code records where someone came from; signing up without one stays completely normal.
+
+**2. Attribution is not consent.** Entering a code at signup tells us which event reached that student. It must **not** give that school's staff visibility of their progress. That is the `school_progress` scope, granted by the student or their guardian, revocable, and naming the organisation — `0021` exists precisely because that gate was once too loose. A funnel that silently turns a classroom visit into staff surveillance of a minor is the wrong product, and it is the easy mistake to make here because the data is right there.
+
+Sponsors see aggregate only, which is already a locked rule.
+
+### What this does to the age question
+
+The demo says K-12. Signup is gated at 13+ and the target student is 16–26, so **the yield from a visit is the older part of that room, and the guardian flow stops being an edge case** — it becomes the main path for a large share of signups. Today a guardian invite is optional and student-initiated. If most signups are 14- to 17-year-olds who just met a pilot, that flow needs to be the obvious one rather than something on a profile page.
+
+This is a question for the lawyer alongside the two already open, and it is more urgent than it looked: it is no longer hypothetical that minors arrive in bulk from schools.
+
 ## Three decisions that are yours, not mine
 
-**1. The leaderboard contradicts a locked rule in CLAUDE.md.** The demo has an "Impact Leaderboard — recognizing the pilots who go above and beyond", with points. The business rules in CLAUDE.md say, in as many words: *"No mentor leaderboard. It turns a supportive community competitive and punishes whoever took the hardest student."*
+**1. The leaderboard is out — settled Sep 24 2026.** The demo has an "Impact Leaderboard" with points; CLAUDE.md says *"No mentor leaderboard. It turns a supportive community competitive and punishes whoever took the hardest student."* **The founder chose the rule: a record of what each pilot has done, no ranking.**
 
-The reasoning transfers. A leaderboard rewards the pilot who does eight easy visits near home over the one who drives three hours to a rural school, and it makes a volunteer's contribution a ranking. If you want recognition without a ranking, there are versions that do not pit mentors against each other — a record of what someone has done, visible to them and on their professional record, with no ordering. **Say which you want; I am not going to quietly build either one.**
+So: a mentor sees their own visits, hours, and the schools they went to, and can show it on a professional record. No ordering, no points, no comparison to other mentors. The demo's leaderboard page does not get rebuilt.
 
 **2. "Students inspired" as a counted metric needs a source.** If a mentor enters it, it is unverified data heading into a sponsor report, which your own milestone rules forbid: *"Unverified data in a sponsor report is a trust event you don't recover from."* The existing pattern fits exactly — the mentor reports the visit, the teacher confirms it, and a sponsor report distinguishes the two.
 
@@ -50,4 +74,12 @@ The reasoning transfers. A leaderboard rewards the pilot who does eight easy vis
 
 ## Sequencing
 
-This is behind the beta blockers — a CFI, the lawyer, Equity Engine, and the beta's scope. It is also behind them for a product reason: the mentorship hub sells to schools and sponsors, and the strongest thing to sell them is outcome data from the ground school, which does not exist until a CFI approves content.
+This is behind the beta blockers — a CFI, the lawyer, Equity Engine, and the beta's scope. It is also behind them for a product reason: the hub's purpose is to bring students into the ground school, and a student who arrives before a CFI has approved anything finds no quiz, no practice test and no visible progress. **Filling the front door before the building is ready wastes the visit**, and a classroom you have already spoken to is hard to go back to.
+
+The build order that follows from that:
+
+1. A CFI approves content, so an arriving student finds a working ground school.
+2. **Event → attribution → signup.** The smallest hub that does the one thing email cannot.
+3. A mentor's own record of what they have done, and verification status for schools.
+4. Classroom requests and matching — worth automating once there are more visits than can be arranged by hand.
+5. Sponsor reporting, aggregate, built on the attribution from step 2.
