@@ -209,7 +209,7 @@ Computed per ACS code, rolled up per knowledge area, weighted by how much of the
 - **A ready student is still pointed at their CFI**, because the endorsement is theirs to give.
 - **Quick tests cannot mature a readiness score, and that is deliberate** (founder, Sep 23 2026). The smallest areas are one question in sixty and round to zero on a 20-question test, so full-length tests are what build coverage. The copy says so rather than leaving a student wondering why the number never appears.
 
-**What is not built yet:** figures rendered inline rather than referenced by number, and an admin page over `getBankHealth()`. Authoring and review pipelines now exist — see below. Rule 6 of the spec is half-built: a weak code links to its lesson, but the weak area is **not** preloaded into the tutor's `masteryNotes` — that needs a change to the AI instructor, which this build was told not to touch. **The bank holds 24 drafted weather questions and nothing approved** (Sep 24 2026) — one area of thirteen, so no whole-test mode opens. Roughly 600 approved questions would give one student ten non-repeating full tests; about 180 makes a usable first release, which is three times each area's blueprint slots.
+**What is not built yet:** figures rendered inline rather than referenced by number. Authoring and review pipelines now exist, `getBankHealth()` has an interface on `/admin`, and **rule 6 is complete** — scored practice results reach the tutor (see "Scored practice results reach the tutor" below), built Sep 24 2026 on the founder's explicit go-ahead to touch the instructor, with `SYSTEM_PROMPT` untouched. **The bank holds 24 drafted weather questions and nothing approved** (Sep 24 2026) — one area of thirteen, so no whole-test mode opens. Roughly 600 approved questions would give one student ten non-repeating full tests; about 180 makes a usable first release, which is three times each area's blueprint slots.
 
 ---
 
@@ -265,6 +265,26 @@ A CFI reviews the 144 quiz cards in the app: status tabs with counts, a lesson l
 - **Options are shown in stored order here, not shuffled.** This is a reviewer checking a card against its document, not a student sitting a quiz. Students still see them shuffled, which is why no card may refer to another option by letter.
 - **There is no edit box, and there must not be one.** The markdown is the source and the next sync overwrites the row, so a correction typed here would vanish and a CFI who watches that happen stops trusting the pipeline. "Send back" with a note is how a fix reaches the place that lasts.
 - **Objective wording, lesson titles and the safety-critical badge fail toward absent.** They are context, not correctness: a missing badge is a gap, a wrong badge is a false assurance, and neither should hide a card a CFI is waiting on.
+
+---
+
+## Scored practice results reach the tutor
+
+Closes rule 6 of the practice-test spec. A weak ACS code already linked to its lesson, but Captain Path had no idea a student had just scored 2 of 8 on the thing it was about to teach, so it taught identically either way — the opposite of adaptive. Read by `src/lib/practice/tutor-evidence.ts`, rendered into a paragraph by `buildMasteryNotes`.
+
+**`src/lib/tutor.ts` was not modified at all.** `SYSTEM_PROMPT` and the prompt-cache breakpoints are byte-identical; the evidence goes into the `masteryNotes` parameter that was already wired. The existing TEACHING APPROACH block already keys off exactly this decision — elicit first only where the notes show the student has demonstrated something, teach first otherwise — so scored results simply supply the best available input to it. Nothing in the prompt needed rewording, and nothing should be reworded for it later.
+
+**Verified by fixtures, not on the live site** — `node scripts/check-mastery-notes.mjs`, eight assertions over the wording, which is the part that changes how the tutor teaches and the part no type checker can see. **Live verification needs an approved question**, so it waits on the CFI: the chain is approved question → student sits a test → at least three answers on one objective → they open that lesson → the tutor teaches instead of asking.
+
+### Locked design decisions
+
+- **No readiness verdict crosses this boundary.** The notes carry counts per objective and an explicit instruction that they say nothing about knowledge-test or checkride readiness. Captain Path never judges that — a human CFI's certificate is on the line — and a fixture asserts the refusal is present and that no verdict wording leaks in.
+- **The structural wall between the two evidence streams runs one way.** `objective_signals` is inferred and must never reach a report; scored practice answers reaching the tutor is exactly what they are for. Feeding marked evidence *into* teaching is the point; feeding impressions into reporting is the thing the wall prevents.
+- **Fewer than three answers on an objective says nothing.** Two wrong out of two is a coin flip, and telling the tutor it is a gap would have it re-teach on noise.
+- **A focused query, not `loadReadiness`.** That reads every answer a student has ever given and computes a recommendation — wasteful on a call that runs per message, and it would put a verdict within reach. Reads with the service role because `practice_answers.is_correct` is granted to nobody in the browser.
+- **Fails soft to no evidence.** A tutor that knows less is worse; a tutor that will not answer because a practice table was unreachable is broken. Logged as `Practice evidence unavailable for the tutor:`.
+- **Only objectives belonging to the current lesson.** A question with no `objective_id` is ignored rather than guessed at, and a weak area elsewhere stays the practice report's job — it already links there. Matching is by `objective_id`, never by knowledge-area name, because the blueprint's area names are ours and a lesson's ACS areas are the FAA's.
+- **Cost: about 95 tokens on the uncached system block** when evidence exists — roughly 0.03¢ on top of 0.48¢ per exchange, and only for students who have sat a test.
 
 ---
 
