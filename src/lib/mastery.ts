@@ -1,5 +1,6 @@
 import type { Lesson, Stage } from "@/lib/curriculum";
 import type { LatestObjectiveSignal } from "@/lib/objective-signals-read";
+import type { PracticeEvidence } from "@/lib/practice/tutor-evidence";
 import type { ProgressBySlug } from "@/lib/progress";
 
 /**
@@ -21,6 +22,13 @@ export type MasterySignals = {
    * is the correct behaviour before any signals exist.
    */
   signals?: LatestObjectiveSignal[];
+  /**
+   * Optional. Scored practice-test results for this lesson's objectives. Unlike
+   * `signals` this is marked evidence rather than the tutor's own read of a
+   * conversation, which is why it is stated more firmly below — and why it is
+   * allowed to decide whether the tutor explains or elicits.
+   */
+  practice?: PracticeEvidence[];
 };
 
 /**
@@ -47,6 +55,7 @@ export function buildMasteryNotes(input: MasterySignals): string {
     progress,
     priorMessagesInLesson,
     signals: objectiveSignals,
+    practice,
   } = input;
 
   const lines: string[] = [];
@@ -152,6 +161,51 @@ export function buildMasteryNotes(input: MasterySignals): string {
         "Caveat: these readings are one model's read of earlier conversations, not a scored result. Treat them as where to check, not as proof of what the student knows.",
       );
     }
+  }
+
+  // Scored practice-test results, when any exist for this lesson's objectives.
+  //
+  // Stated more firmly than the signals above because it is marked evidence
+  // rather than an impression, and it is the one input allowed to decide whether
+  // this turn explains or elicits — which is what the TEACHING APPROACH block in
+  // the system prompt already keys off, so nothing in that prompt had to change.
+  //
+  // Counts only. No readiness verdict crosses this boundary: Captain Path does
+  // not judge whether a student is ready for a test or a checkride, and a
+  // percentage per objective is a fact about answers rather than a judgement
+  // about a person.
+  const scored = (practice ?? []).flatMap((entry) => {
+    const objective = lesson.objectives.find(
+      (item) => item.id === entry.objectiveId,
+    );
+    return objective ? [{ objective, entry }] : [];
+  });
+
+  if (scored.length > 0) {
+    for (const { objective, entry } of scored) {
+      lines.push(
+        entry.isWeak
+          ? `Scored ${entry.correct} of ${entry.answered} on "${objective.text}" in practice tests. Teach this before asking them to reason about it.`
+          : `Scored ${entry.correct} of ${entry.answered} on "${objective.text}" in practice tests. You may ask before explaining here.`,
+      );
+    }
+
+    const weakSafetyCritical = scored.filter(
+      ({ objective, entry }) => objective.isSafetyCritical && entry.isWeak,
+    );
+
+    if (weakSafetyCritical.length > 0) {
+      const names = weakSafetyCritical
+        .map(({ objective }) => `"${objective.text}"`)
+        .join("; ");
+      lines.push(
+        `Safety-critical and scored badly: ${names}. Cover these properly in this lesson rather than leaving them to the next practice test.`,
+      );
+    }
+
+    lines.push(
+      "These practice results are scored answers, not an impression — treat them as real evidence of what the student could and could not do. They say nothing about whether the student is ready for the knowledge test or a checkride, and you must not offer a view on that.",
+    );
   }
 
   return lines.join(" ");

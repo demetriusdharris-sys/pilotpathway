@@ -29,6 +29,7 @@ import {
 import { loadLatestSignals } from "@/lib/objective-signals-read";
 import { isStarterPrompt } from "@/lib/tutor-starters";
 import { buildMasteryNotes } from "@/lib/mastery";
+import { loadPracticeEvidenceForLesson } from "@/lib/practice/tutor-evidence";
 import { getProgress } from "@/lib/progress";
 
 const MAX_MESSAGE_CHARS = 4000;
@@ -76,7 +77,8 @@ function classifyUpstreamError(error: unknown): {
     return {
       status: 503,
       code: "upstream_unreachable",
-      message: "Could not reach your instructor. Check your connection and try again.",
+      message:
+        "Could not reach your instructor. Check your connection and try again.",
     };
   }
   return {
@@ -89,7 +91,10 @@ function classifyUpstreamError(error: unknown): {
 export async function POST(request: NextRequest) {
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json(
-      { error: "The AI instructor is not configured yet.", code: "not_configured" },
+      {
+        error: "The AI instructor is not configured yet.",
+        code: "not_configured",
+      },
       { status: 503 },
     );
   }
@@ -142,7 +147,10 @@ export async function POST(request: NextRequest) {
   }
   if (message.length > MAX_MESSAGE_CHARS) {
     return NextResponse.json(
-      { error: "That message is too long. Try breaking it up.", code: "too_long" },
+      {
+        error: "That message is too long. Try breaking it up.",
+        code: "too_long",
+      },
       { status: 400 },
     );
   }
@@ -226,25 +234,44 @@ export async function POST(request: NextRequest) {
   // --- Student context ------------------------------------------------------
   //
   // Everything the tutor needs to know about who it is talking to and where
-  // they are. All five reads are independent, so they run concurrently.
+  // they are. All six reads are independent, so they run concurrently.
 
-  const [history, priorCount, progress, profileResult, objectiveSignals] =
-    await Promise.all([
-      loadConversation(
-        supabase,
-        user.id,
-        found.lesson.slug,
-        MAX_HISTORY_MESSAGES,
-      ),
-      countConversation(supabase, user.id, found.lesson.slug),
-      getProgress(user.id),
-      supabase
-        .from("profiles")
-        .select("first_name")
-        .eq("id", user.id)
-        .maybeSingle(),
-      loadLatestSignals(supabase, user.id, found.lesson.slug),
-    ]);
+  const [
+    history,
+    priorCount,
+    progress,
+    profileResult,
+    objectiveSignals,
+    practiceEvidence,
+  ] = await Promise.all([
+    loadConversation(
+      supabase,
+      user.id,
+      found.lesson.slug,
+      MAX_HISTORY_MESSAGES,
+    ),
+    countConversation(supabase, user.id, found.lesson.slug),
+    getProgress(user.id),
+    supabase
+      .from("profiles")
+      .select("first_name")
+      .eq("id", user.id)
+      .maybeSingle(),
+    loadLatestSignals(supabase, user.id, found.lesson.slug),
+    // Fails soft to no evidence. A tutor that knows less is worse; a tutor
+    // that will not answer because a practice-test read failed is broken, and
+    // the lesson has to keep working whatever the practice tables are doing.
+    loadPracticeEvidenceForLesson(admin, user.id, found.lesson).catch(
+      (error: unknown) => {
+        console.error("Practice evidence unavailable for the tutor:", {
+          userId: user.id,
+          lessonSlug: found.lesson.slug,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return [];
+      },
+    ),
+  ]);
 
   const firstName = profileResult.data?.first_name ?? null;
 
@@ -254,6 +281,7 @@ export async function POST(request: NextRequest) {
     progress,
     priorMessagesInLesson: priorCount,
     signals: objectiveSignals,
+    practice: practiceEvidence,
   });
 
   // Persist the question now. If the reply fails the student can see what they
@@ -392,11 +420,8 @@ export async function POST(request: NextRequest) {
               lesson: found.lesson.slug,
             });
           } else {
-            const { signals, usage: signalUsage } = await extractObjectiveSignals(
-              found.lesson,
-              question,
-              reply,
-            );
+            const { signals, usage: signalUsage } =
+              await extractObjectiveSignals(found.lesson, question, reply);
 
             // Deliberately NOT recordTutorCost. That meters the student's daily
             // message quota, and inference we chose to run on their conversation
