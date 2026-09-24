@@ -11,8 +11,10 @@
 // a question back to draft the moment its content changes, whatever changed
 // it.
 
-import { writeFileSync } from "node:fs";
+import { writeFileSync, readFileSync, existsSync } from "node:fs";
 import { parseAllQuestionDocuments } from "./lib/questions.mjs";
+
+const ACS_INDEX = "docs/reference/acs-codes.json";
 
 const OUT = "supabase/migrations/0027_sync_question_bank.sql";
 
@@ -20,6 +22,24 @@ function lit(value) {
   if (value === null || value === undefined) return "null";
   return `'${String(value).replace(/'/g, "''")}'`;
 }
+
+/**
+ * Every ACS code the FAA document actually contains, so an invented or stale
+ * one is refused here rather than ending up on a student's report. Built by
+ * scripts/build-acs-index.mjs from the ACS PDF in docs/reference.
+ */
+function loadAcsCodes() {
+  if (!existsSync(ACS_INDEX)) {
+    console.error(`import-questions: ${ACS_INDEX} is missing.`);
+    console.error("  Run: node scripts/build-acs-index.mjs");
+    process.exit(1);
+  }
+
+  const index = JSON.parse(readFileSync(ACS_INDEX, "utf8"));
+  return new Set(Object.keys(index.codes ?? {}));
+}
+
+const acsCodes = loadAcsCodes();
 
 let documents;
 let skipped;
@@ -41,6 +61,27 @@ const questions = documents.flatMap((document) =>
 if (questions.length === 0) {
   console.error(
     "import-questions: no questions found in docs/questions — nothing to sync",
+  );
+  process.exit(1);
+}
+
+// A code the ACS does not contain is the exact failure these rules exist to
+// prevent: it looks official, it reaches a student's report, and they repeat
+// it to an examiner. Refuse the whole import rather than land part of it.
+const unknownCodes = [
+  ...new Set(
+    questions.filter((q) => !acsCodes.has(q.acsCode)).map((q) => q.acsCode),
+  ),
+].sort();
+
+if (unknownCodes.length > 0) {
+  console.error("import-questions: these ACS codes are not in the FAA document:");
+  for (const code of unknownCodes) {
+    const users = questions.filter((q) => q.acsCode === code).map((q) => q.key);
+    console.error(`  ${code} — used by ${users.join(", ")}`);
+  }
+  console.error(
+    `  Check them against ${ACS_INDEX}, or regenerate it if the ACS has been revised.`,
   );
   process.exit(1);
 }

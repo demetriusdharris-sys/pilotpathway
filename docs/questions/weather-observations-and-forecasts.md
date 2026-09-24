@@ -7,14 +7,16 @@
 
 **Batch of 5, not 20 — this exists to prove the pipeline works end to end.** A real batch is twenty questions on one ACS code, per the authoring rules.
 
-**⚠ The ACS codes below are OURS, not the FAA's.** They use a `PPW.` prefix deliberately. Real Private Pilot ACS codes are revision-specific and this author does not have the current ACS document in front of them, so inventing codes that look official would be exactly the failure these rules exist to prevent. **Before this batch is approved, someone with the current ACS must replace them** — or decide that our own codes are what the report shows.
+**ACS codes are real**, taken from `docs/reference/acs-codes.json`, which is generated from the FAA's own Private Pilot ACS. The importer refuses any code that document does not contain.
+
+Q5 is filed under the parent code `PA.I.C.K3` rather than a sub-letter: the ACS lists thunderstorms as a sub-item of that element, but not every sub-item is separately tagged in the document, and a made-up sub-code would defeat the point of checking.
 
 ---
 
 ### Q1
 
-**Key:** `PPW.WX.OBS.q1`
-**ACS code:** `PPW.WX.OBS`
+**Key:** `PA.I.C.K2a.q1`
+**ACS code:** `PA.I.C.K2a`
 **Objective:** `s1-weather-intro.metar-and-taf`
 **Difficulty:** 1
 **Source:** PHAK, aviation weather services chapter — METAR versus TAF
@@ -35,8 +37,8 @@
 
 ### Q2
 
-**Key:** `PPW.WX.OBS.q2`
-**ACS code:** `PPW.WX.OBS`
+**Key:** `PA.I.C.K2a.q2`
+**ACS code:** `PA.I.C.K2a`
 **Objective:** `s1-weather-intro.metar-and-taf`
 **Difficulty:** 2
 **Source:** AIM, wind direction reporting — true versus magnetic reference
@@ -57,8 +59,8 @@
 
 ### Q3
 
-**Key:** `PPW.WX.OBS.q3`
-**ACS code:** `PPW.WX.OBS`
+**Key:** `PA.I.C.K3d.q1`
+**ACS code:** `PA.I.C.K3d`
 **Objective:** `s1-weather-intro.weather-drivers`
 **Difficulty:** 2
 **Source:** PHAK, weather theory chapter — temperature, dew point and condensation
@@ -79,8 +81,8 @@
 
 ### Q4
 
-**Key:** `PPW.WX.OBS.q4`
-**ACS code:** `PPW.WX.OBS`
+**Key:** `PA.I.C.K3i.q1`
+**ACS code:** `PA.I.C.K3i`
 **Objective:** `s1-weather-intro.fog-storms-icing`
 **Difficulty:** 2
 **Source:** PHAK, weather theory chapter — structural icing conditions
@@ -101,8 +103,8 @@
 
 ### Q5
 
-**Key:** `PPW.WX.OBS.q5`
-**ACS code:** `PPW.WX.OBS`
+**Key:** `PA.I.C.K3.q1`
+**ACS code:** `PA.I.C.K3`
 **Objective:** `s1-weather-intro.fog-storms-icing`
 **Difficulty:** 3
 **Source:** PHAK, weather theory chapter — thunderstorm formation requirements

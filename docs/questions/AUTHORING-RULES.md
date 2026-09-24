@@ -32,6 +32,16 @@ Every question carries an ACS code so tests can be stratified and a result can b
 
 Codes are revision-specific. A student who repeats a stale one to a DPE pays for our mistake — the same reason the tutor cites Areas of Operation by name.
 
+**You cannot invent one, and you do not have to remember them.** `docs/reference/acs-codes.json` holds every code in the FAA's Private Pilot ACS, generated from the document itself:
+
+```
+node scripts/build-acs-index.mjs
+```
+
+The importer refuses any code that index does not contain, and names the questions using it. **Regenerate the index when the ACS is revised** — that is also how you find out which of your questions are now keyed to something that no longer exists.
+
+Where the ACS lists a sub-item that it does not separately code, file the question under the parent code rather than inventing a sub-letter.
+
 ## 4. The explanation covers all three choices.
 
 Not just why the right answer is right. **Why each wrong one is wrong**, in a sentence each. A student who picked a distractor needs to know what was wrong with their reasoning, not simply that someone else's reasoning was better.
