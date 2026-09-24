@@ -7,6 +7,7 @@ import type { Stage } from "@/lib/curriculum";
 import { loadCurriculum } from "@/lib/curriculum-store";
 import { loadStaffOrganizations } from "@/lib/school-roster";
 import { isReviewer } from "@/lib/practice/review";
+import { isAdmin } from "@/lib/admin";
 import {
   loadAssessableObjectives,
   loadMastery,
@@ -65,7 +66,10 @@ export default async function DashboardPage() {
   // them, and an account with nothing on screen to suggest they had access —
   // which is a poor welcome for the person the whole queue is waiting on.
   // isReviewer already fails soft to false, so a bad read shows no link.
-  const canReview = await isReviewer(supabase);
+  const [canReview, canAdminister] = await Promise.all([
+    isReviewer(supabase),
+    isAdmin(supabase),
+  ]);
 
   // Every account created before the age gate has no date of birth, and
   // is_adult() treats unknown age as a minor. Nothing else ever sends those
@@ -117,6 +121,14 @@ export default async function DashboardPage() {
                 className="text-muted-foreground hover:text-foreground text-sm font-medium underline-offset-4 hover:underline"
               >
                 Review
+              </Link>
+            ) : null}
+            {canAdminister ? (
+              <Link
+                href="/admin"
+                className="text-muted-foreground hover:text-foreground text-sm font-medium underline-offset-4 hover:underline"
+              >
+                Admin
               </Link>
             ) : null}
             <Link
