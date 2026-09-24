@@ -182,7 +182,12 @@ select source_key, acs_code, knowledge_area, objective_id, stem, choice_a, choic
        choice_c, correct_choice, explanation, figure_ref, figure_supplement,
        difficulty, authored_by, source_note, 'draft'
 from incoming_questions
-on conflict (source_key) do update set
+-- The predicate is repeated because 0026's unique index on source_key is
+-- PARTIAL ("where source_key is not null"), and Postgres will only infer a
+-- partial index for ON CONFLICT when the statement names the same condition.
+-- Without it: "there is no unique or exclusion constraint matching the ON
+-- CONFLICT specification".
+on conflict (source_key) where source_key is not null do update set
   acs_code          = excluded.acs_code,
   knowledge_area    = excluded.knowledge_area,
   objective_id      = excluded.objective_id,
