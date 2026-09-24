@@ -236,8 +236,12 @@ drop table incoming_options;
 select
   count(*) as total_cards,
   count(*) filter (where status = 'draft') as draft_cards,
+  count(*) filter (where status = 'needs_changes') as sent_back_cards,
   count(*) filter (where status = 'approved') as approved_cards,
-  count(*) filter (where status = 'retired') as retired_cards
+  count(*) filter (where status = 'retired') as retired_cards,
+  -- The doubts we wrote down, now readable on the review page. If this is 0
+  -- after a sync, the flags did not land and a CFI would review 17 cards blind.
+  count(*) filter (where author_note is not null) as flags_carried
 from public.quiz_cards;
 `;
 
