@@ -7,6 +7,8 @@ import { isAdmin, loadStaffAccounts } from "@/lib/admin";
 import { getBankHealth } from "@/lib/practice/assemble";
 import { loadReviewCounts } from "@/lib/practice/review";
 import { loadCardReviewCounts } from "@/lib/card-review";
+import { countReportsByStatus, loadReports } from "@/lib/content-reports";
+import { ReportTriage } from "@/components/report-triage";
 import { ReviewerAccessForm } from "@/components/reviewer-access-form";
 import { SignOutButton } from "@/components/sign-out-button";
 
@@ -57,18 +59,18 @@ export default async function AdminPage() {
     throw new Error("The admin page is unavailable right now.");
   }
 
-  const [staff, health, questionCounts, cardCounts] = await Promise.all([
-    loadStaffAccounts(admin),
-    getBankHealth(supabase),
-    loadReviewCounts(admin),
-    loadCardReviewCounts(admin),
-  ]);
+  const [staff, health, questionCounts, cardCounts, reports, reportCounts] =
+    await Promise.all([
+      loadStaffAccounts(admin),
+      getBankHealth(supabase),
+      loadReviewCounts(admin),
+      loadCardReviewCounts(admin),
+      loadReports(admin, "new"),
+      countReportsByStatus(admin),
+    ]);
 
   const thin = health.filter((entry) => entry.approved < entry.slots);
-  const totalApproved = health.reduce(
-    (sum, entry) => sum + entry.approved,
-    0,
-  );
+  const totalApproved = health.reduce((sum, entry) => sum + entry.approved, 0);
 
   return (
     <main className="flex flex-1 flex-col">
@@ -148,6 +150,41 @@ export default async function AdminPage() {
             Students are not listed. Nothing here needs a directory of their
             email addresses, and most of them are minors.
           </p>
+        </section>
+
+        {/* ------------------------------------------------------------ */}
+        {/* Reports first when there are any. A student took the trouble to tell
+            us something is wrong, and a wrong fact in front of a learner
+            outranks every other thing on this page. */}
+        <section className="border-border bg-card mt-4 rounded-lg border p-6">
+          <h2 className="text-xl font-semibold">
+            Reported problems{" "}
+            {reportCounts.new > 0 ? (
+              <span className="text-gold-strong tabular-nums">
+                {reportCounts.new}
+              </span>
+            ) : null}
+          </h2>
+          <p className="text-muted-foreground mt-1 text-sm text-pretty">
+            Students saying a card, a question or a tutor reply looks wrong. A
+            report never changes the content itself — you decide what reaches
+            the reviewer, in the review queue.
+          </p>
+
+          {reports.length === 0 ? (
+            <p className="text-muted-foreground mt-3 text-sm">
+              Nothing new.{" "}
+              {reportCounts.actioned + reportCounts.dismissed > 0
+                ? `${reportCounts.actioned} handled, ${reportCounts.dismissed} needed no change.`
+                : ""}
+            </p>
+          ) : (
+            <ul className="mt-4 flex flex-col gap-3">
+              {reports.map((report) => (
+                <ReportTriage key={report.id} report={report} />
+              ))}
+            </ul>
+          )}
         </section>
 
         {/* ------------------------------------------------------------ */}

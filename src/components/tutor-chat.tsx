@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { ReportProblem } from "@/components/report-problem";
 import { Button } from "@/components/ui/button";
 import type { TutorMessage } from "@/lib/tutor";
 
@@ -106,8 +107,8 @@ export function TutorChat({
         Ask your instructor
       </h2>
       <p className="text-muted-foreground mt-2 text-sm text-pretty">
-        Your AI ground instructor. It teaches by asking — expect questions
-        back. Your CFI still signs everything.
+        Your AI ground instructor. It teaches by asking — expect questions back.
+        Your CFI still signs everything.
       </p>
 
       {/* Always rendered, so the region exists before its text changes —
@@ -162,6 +163,20 @@ export function TutorChat({
                   </span>
                 ) : null}
               </p>
+
+              {/* Only on the instructor's replies, and only once a reply has
+                  finished. The tutor is the one surface here that no CFI has
+                  read before a student sees it — its text is generated fresh
+                  every turn — so this is the report that matters most. */}
+              {message.role === "assistant" &&
+              !(streaming && index === messages.length - 1) ? (
+                <ReportProblem
+                  subjectKind="tutor_message"
+                  lessonSlug={lessonSlug}
+                  excerpt={message.content}
+                  label="Does this look wrong?"
+                />
+              ) : null}
             </div>
           ))}
           <div ref={endRef} />

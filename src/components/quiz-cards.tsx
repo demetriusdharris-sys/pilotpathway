@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { ReportProblem } from "@/components/report-problem";
 import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -128,6 +129,16 @@ function Card({
           </div>
         )}
       </form>
+
+      {/* Shown before answering as well as after, on purpose: "two of these
+          look right" is a report worth having, and it is only possible to
+          notice before choosing. */}
+      <ReportProblem
+        subjectKind="quiz_card"
+        subjectId={card.id}
+        lessonSlug={card.lessonSlug}
+        excerpt={card.question}
+      />
     </li>
   );
 }

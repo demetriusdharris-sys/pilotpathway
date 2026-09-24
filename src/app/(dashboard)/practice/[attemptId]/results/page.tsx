@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ReportProblem } from "@/components/report-problem";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -199,6 +200,15 @@ export default async function PracticeResultPage({
               </p>
 
               <p className="mt-3 text-sm text-pretty">{item.explanation}</p>
+
+              {/* After grading, not during: the explanation is on screen, which
+                  is the moment a student can tell a bad question from a wrong
+                  answer of their own. */}
+              <ReportProblem
+                subjectKind="practice_question"
+                subjectId={item.questionId}
+                excerpt={item.stem}
+              />
             </li>
           ))}
         </ol>

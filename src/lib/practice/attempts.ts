@@ -367,6 +367,8 @@ export type AttemptResult = {
   byArea: { area: string; correct: number; asked: number }[];
   review: {
     position: number;
+    /** Needed so a student can report a question that looks wrong. */
+    questionId: string;
     stem: string;
     acsCode: string;
     knowledgeArea: string;
@@ -499,6 +501,7 @@ export async function loadResult(
 
     review.push({
       position,
+      questionId,
       stem: text(question.stem) ?? "",
       acsCode,
       knowledgeArea,
