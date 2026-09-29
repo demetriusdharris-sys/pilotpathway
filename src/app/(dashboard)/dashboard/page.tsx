@@ -136,6 +136,14 @@ export default async function DashboardPage() {
                 Review
               </Link>
             ) : null}
+            {isStaff || isPilot ? (
+              <Link
+                href="/visits"
+                className="text-muted-foreground hover:text-foreground text-sm font-medium underline-offset-4 hover:underline"
+              >
+                Classroom visits
+              </Link>
+            ) : null}
             {isPilot ? (
               <Link
                 href="/pilot"
