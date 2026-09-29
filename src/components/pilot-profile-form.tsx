@@ -222,6 +222,39 @@ export function PilotProfileForm({
           </div>
         </fieldset>
 
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              name="isCfi"
+              defaultChecked={profile?.isCfi ?? false}
+              className="mt-0.5 size-4"
+            />
+            <span>
+              I am a flight instructor
+              <span className="text-muted-foreground mt-1 block text-xs text-pretty">
+                We are looking for CFIs to check our questions and quiz cards
+                before students see them. Ticking this puts you in front of us —
+                it does not give you anything to do yet.
+              </span>
+            </span>
+          </label>
+          <div>
+            <Label htmlFor="certificateNumber">
+              Certificate number (optional)
+            </Label>
+            <Input
+              id="certificateNumber"
+              name="certificateNumber"
+              defaultValue={profile?.certificateNumber ?? ""}
+              placeholder="1234567"
+            />
+            <p className="text-muted-foreground mt-1 text-xs text-pretty">
+              So we can check it against the FAA airman registry ourselves.
+            </p>
+          </div>
+        </div>
+
         <div className="mt-4">
           <Label htmlFor="languages">Languages you can present in</Label>
           <Input

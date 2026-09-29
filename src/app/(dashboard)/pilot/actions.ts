@@ -130,6 +130,11 @@ export async function savePilot(
       .filter((entry) => entry.length > 0 && entry.length <= 40)
       .slice(0, 8),
     affiliations: list(formData, "affiliations", AFFILIATIONS),
+    // Self-declared, and it grants nothing: reviewing content is
+    // content_reviewers and entering a classroom is vetting_status, both of
+    // which an administrator decides. See 0040.
+    isCfi: formData.get("isCfi") === "on",
+    certificateNumber: trimmed(formData, "certificateNumber"),
   };
 
   try {

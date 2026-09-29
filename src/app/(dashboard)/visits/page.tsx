@@ -7,11 +7,13 @@ import { loadOwnPilotProfile } from "@/lib/pilots";
 import {
   GRADE_LABEL,
   STATUS_LABEL,
+  loadSchoolImpact,
   loadVisits,
   type ClassroomVisit,
 } from "@/lib/visits";
 import { RequestVisitForm } from "@/components/visit-forms";
 import { SetUpSchoolForm } from "@/components/set-up-school-form";
+import { ImpactPanel } from "@/components/impact-record";
 import { loadOwnOrganizations } from "@/lib/organizations";
 import { SignOutButton } from "@/components/sign-out-button";
 
@@ -81,6 +83,11 @@ export default async function VisitsPage() {
     loadVisits(supabase),
     loadOwnOrganizations(supabase, user.id),
   ]);
+
+  const schoolImpact = await loadSchoolImpact(
+    supabase,
+    organizations.map((org) => org.organizationId),
+  ).catch(() => null);
 
   const unconfirmed = ownOrganizations.filter((org) => org.verifiedAt === null);
 
@@ -207,6 +214,18 @@ export default async function VisitsPage() {
                 name: org.name,
               }))}
             />
+          </section>
+        ) : null}
+
+        {isStaff && schoolImpact && schoolImpact.visits > 0 ? (
+          <section className="border-border bg-card mt-4 rounded-lg border p-6">
+            <h2 className="text-xl font-semibold">
+              What your students have had
+            </h2>
+            <p className="text-muted-foreground mt-1 text-sm text-pretty">
+              Across every visit you have hosted.
+            </p>
+            <ImpactPanel record={schoolImpact} audience="school" />
           </section>
         ) : null}
 

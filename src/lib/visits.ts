@@ -421,3 +421,115 @@ export const cancelVisit = (
     p_visit_id: visitId,
     p_reason: reason,
   });
+
+// --- What somebody has actually done ----------------------------------------
+
+/**
+ * A record, never a ranking.
+ *
+ * The business rules are explicit that there is no mentor leaderboard, because
+ * it turns a supportive community competitive and punishes whoever took the
+ * hardest assignment — the pilot who drives three hours to a rural school loses
+ * to one doing eight easy visits near home. So a pilot sees their own numbers and
+ * nobody else's, and nothing here can be ordered against another person.
+ *
+ * Every figure comes from a completed visit, and the headcount on a completed
+ * visit was entered by the school rather than the pilot. That is what makes this
+ * worth putting on a professional record.
+ */
+export type ImpactRecord = {
+  visits: number;
+  studentsReached: number;
+  minutes: number;
+  /** Distinct schools, or distinct pilots, depending on whose record this is. */
+  partners: number;
+  firstVisit: string | null;
+  latestVisit: string | null;
+};
+
+function summarise(
+  rows: Row[],
+  partnerColumn: "organization_id" | "pilot_user_id",
+): ImpactRecord {
+  const partners = new Set<string>();
+  let studentsReached = 0;
+  let minutes = 0;
+  let first: string | null = null;
+  let latest: string | null = null;
+
+  for (const row of rows) {
+    const partner = text(row[partnerColumn]);
+    if (partner) partners.add(partner);
+
+    studentsReached += int(row.students_attended) ?? 0;
+    minutes += int(row.duration_minutes) ?? 0;
+
+    const when = text(row.completed_at);
+    if (when) {
+      if (first === null || when < first) first = when;
+      if (latest === null || when > latest) latest = when;
+    }
+  }
+
+  return {
+    visits: rows.length,
+    studentsReached,
+    minutes,
+    partners: partners.size,
+    firstVisit: first,
+    latestVisit: latest,
+  };
+}
+
+/** One pilot's own record. Reads their own completed visits; RLS scopes it. */
+export async function loadPilotImpact(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<ImpactRecord> {
+  const { data, error } = await supabase
+    .from("classroom_visits")
+    .select(
+      "organization_id, students_attended, duration_minutes, completed_at",
+    )
+    .eq("pilot_user_id", userId)
+    .eq("status", "completed");
+
+  if (error) {
+    throw new Error(`pilot impact: ${error.message}`);
+  }
+
+  return summarise((data ?? []) as Row[], "organization_id");
+}
+
+/**
+ * One school's record, across every visit it has hosted.
+ *
+ * Counts distinct pilots rather than schools, since the school is the constant.
+ */
+export async function loadSchoolImpact(
+  supabase: SupabaseClient,
+  organizationIds: string[],
+): Promise<ImpactRecord> {
+  if (organizationIds.length === 0) {
+    return {
+      visits: 0,
+      studentsReached: 0,
+      minutes: 0,
+      partners: 0,
+      firstVisit: null,
+      latestVisit: null,
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("classroom_visits")
+    .select("pilot_user_id, students_attended, duration_minutes, completed_at")
+    .in("organization_id", organizationIds)
+    .eq("status", "completed");
+
+  if (error) {
+    throw new Error(`school impact: ${error.message}`);
+  }
+
+  return summarise((data ?? []) as Row[], "pilot_user_id");
+}

@@ -84,6 +84,13 @@ export default async function DashboardPage() {
     });
   }
 
+  // A pilot mentor who is not also studying has no business on a page of Stage 1
+  // lessons. Conditional on having no progress, so anyone who is genuinely doing
+  // both keeps their dashboard rather than losing it to a pilot profile.
+  if (isPilot && progress.size === 0) {
+    redirect("/pilot");
+  }
+
   // Every account created before the age gate has no date of birth, and
   // is_adult() treats unknown age as a minor. Nothing else ever sends those
   // students to the profile page, so they would stay unable to approve

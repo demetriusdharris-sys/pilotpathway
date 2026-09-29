@@ -50,6 +50,33 @@ function studentFacingError(message: string): string {
   return message;
 }
 
+/**
+ * What somebody says they are when they sign up.
+ *
+ * A router, not a permission. Each kind decides which gate applies and where the
+ * confirmation link lands them; none of them grants anything. A self-declared
+ * CFI still cannot approve content, and a self-declared pilot still cannot enter
+ * a classroom — those are `content_reviewers` and `vetting_status`, and an
+ * administrator decides both.
+ */
+const SIGNUP_KINDS = ["student", "pilot", "cfi", "school"] as const;
+
+type SignupKind = (typeof SIGNUP_KINDS)[number];
+
+/**
+ * Where each kind belongs once they are in.
+ *
+ * Carried through the confirmation email by the existing `?next=` mechanism,
+ * which means no new coupling: the template already appends `&token_hash=` to a
+ * URL that is guaranteed to have a query string.
+ */
+const LANDING_BY_KIND: Record<SignupKind, string> = {
+  student: "/dashboard",
+  pilot: "/pilot",
+  cfi: "/pilot",
+  school: "/visits",
+};
+
 export async function signUp(
   _prevState: AuthState,
   formData: FormData,
@@ -67,13 +94,28 @@ export async function signUp(
     return { error: "Use at least 8 characters for your password." };
   }
 
-  // The age gate is decided here, before any account exists. The browser's
-  // min/max on the date input is a convenience, not a control.
-  const dateOfBirth = String(formData.get("dateOfBirth") ?? "").trim();
-  const ageError = dateOfBirthError(dateOfBirth);
+  // What they said they are. It routes them and nothing else: a false claim
+  // here grants no access at all — reviewing content is `content_reviewers`
+  // and entering a classroom is `vetting_status`, both of which an
+  // administrator decides. See 0040.
+  const declared = String(formData.get("signupAs") ?? "student");
+  const signupAs = SIGNUP_KINDS.includes(declared as SignupKind)
+    ? (declared as SignupKind)
+    : "student";
 
-  if (ageError) {
-    return { error: ageError };
+  // The age gate applies to students, and is decided here before any account
+  // exists — the browser's min/max on the date input is a convenience, not a
+  // control. It does not apply to the adults: a 44-year-old captain being asked
+  // to prove they are over 13 is the wrong question, and unknown age already
+  // fails closed everywhere it matters, because is_adult() treats it as a minor.
+  const dateOfBirth = String(formData.get("dateOfBirth") ?? "").trim();
+
+  if (signupAs === "student") {
+    const ageError = dateOfBirthError(dateOfBirth);
+
+    if (ageError) {
+      return { error: ageError };
+    }
   }
 
   const supabase = await createClient();
@@ -88,7 +130,16 @@ export async function signUp(
   // Carried through the confirmation email so someone who signed up in order
   // to do something specific -- confirm a guardian invite, say -- lands back
   // on that thing instead of a dashboard with no memory of why they came.
-  const next = safeNext(formData.get("next"));
+  //
+  // An explicit destination always wins. Guardian invite emails already in the
+  // world carry `/signup?next=...`, and that link has to keep working.
+  const requested = String(formData.get("next") ?? "");
+  const wasSentSomewhere =
+    requested.startsWith("/") && !requested.startsWith("//");
+
+  const next = wasSentSomewhere
+    ? safeNext(formData.get("next"))
+    : LANDING_BY_KIND[signupAs];
 
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -96,8 +147,11 @@ export async function signUp(
     options: {
       emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
       data: {
-        date_of_birth: dateOfBirth,
+        // Only sent for a student. handle_new_user casts defensively and a null
+        // date of birth fails closed, so an adult without one loses nothing.
+        ...(signupAs === "student" ? { date_of_birth: dateOfBirth } : {}),
         ...(firstName ? { first_name: firstName } : {}),
+        signup_as: signupAs,
       },
     },
   });
@@ -106,10 +160,11 @@ export async function signUp(
     return { error: studentFacingError(error.message) };
   }
 
-  // With email confirmation on, Supabase returns a user but no session.
+  // With email confirmation on, Supabase returns a user but no session. If that
+  // ever changes, send them to the same place the confirmation link would.
   if (data.session) {
     revalidatePath("/", "layout");
-    redirect("/dashboard");
+    redirect(next);
   }
 
   // When the address already has an account, Supabase sends no email and

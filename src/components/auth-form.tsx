@@ -24,6 +24,12 @@ type AuthFormProps = {
    * boundary, which is a hydration mismatch.
    */
   maxDateOfBirth?: string;
+  /**
+   * Signup only. What the person said they are — carried as a hidden field so
+   * the Server Action knows which gate to apply and where to land them. It
+   * grants nothing; see 0040.
+   */
+  signupAs?: string;
 };
 
 function SubmitButton({
@@ -54,8 +60,8 @@ function SubmitButton({
       </Button>
       {slow ? (
         <p role="status" className="text-muted-foreground text-xs text-pretty">
-          Still working — the server is waking up. This can take up to a
-          minute the first time. Don&apos;t refresh.
+          Still working — the server is waking up. This can take up to a minute
+          the first time. Don&apos;t refresh.
         </p>
       ) : null}
     </div>
@@ -71,6 +77,7 @@ export function AuthForm({
   askFirstName,
   askDateOfBirth,
   maxDateOfBirth,
+  signupAs,
 }: AuthFormProps) {
   const [state, formAction] = useActionState<AuthState, FormData>(action, {});
 
@@ -101,6 +108,9 @@ export function AuthForm({
   return (
     <form action={formAction} className="flex flex-col gap-5">
       {next ? <input type="hidden" name="next" value={next} /> : null}
+      {signupAs ? (
+        <input type="hidden" name="signupAs" value={signupAs} />
+      ) : null}
 
       {askFirstName ? (
         <div className="flex flex-col gap-2">

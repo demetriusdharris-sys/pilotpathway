@@ -48,6 +48,8 @@ export type PilotProfile = {
   wishIHadKnown: string | null;
   languages: string[];
   affiliations: string[];
+  isCfi: boolean;
+  certificateNumber: string | null;
   vettingStatus: "unverified" | "pending" | "verified" | "declined";
   vettedBy: string | null;
   vettedAt: string | null;
@@ -68,7 +70,7 @@ function stringList(value: unknown): string[] {
 }
 
 const COLUMNS =
-  "user_id, display_name, job_title, employer, home_city, home_state, home_airport, travel_radius_miles, will_do_virtual, story, grew_up_in, route_in, first_in_family, wish_i_had_known, languages, affiliations, vetting_status, vetted_by, vetted_at, vetting_expires_at, vetting_note";
+  "user_id, display_name, job_title, employer, home_city, home_state, home_airport, travel_radius_miles, will_do_virtual, story, grew_up_in, route_in, first_in_family, wish_i_had_known, languages, affiliations, is_cfi, certificate_number, vetting_status, vetted_by, vetted_at, vetting_expires_at, vetting_note";
 
 function toProfile(row: Row): PilotProfile | null {
   const userId = text(row.user_id);
@@ -100,6 +102,8 @@ function toProfile(row: Row): PilotProfile | null {
     wishIHadKnown: text(row.wish_i_had_known),
     languages: stringList(row.languages),
     affiliations: stringList(row.affiliations),
+    isCfi: row.is_cfi === true,
+    certificateNumber: text(row.certificate_number),
     vettingStatus: (["unverified", "pending", "verified", "declined"].includes(
       status,
     )
@@ -173,6 +177,8 @@ export type PilotUpsert = {
   wishIHadKnown: string | null;
   languages: string[];
   affiliations: string[];
+  isCfi: boolean;
+  certificateNumber: string | null;
 };
 
 /**
@@ -204,6 +210,8 @@ export async function savePilotProfile(
     wish_i_had_known: input.wishIHadKnown,
     languages: input.languages,
     affiliations: input.affiliations,
+    is_cfi: input.isCfi,
+    certificate_number: input.certificateNumber,
   };
 
   const { error } = exists

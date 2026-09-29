@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getSupabaseEnv } from "@/lib/supabase/env";
 import { loadAffiliations, loadOwnPilotProfile } from "@/lib/pilots";
+import { loadPilotImpact } from "@/lib/visits";
+import { ImpactPanel } from "@/components/impact-record";
 import { PilotProfileForm } from "@/components/pilot-profile-form";
 import { SignOutButton } from "@/components/sign-out-button";
 
@@ -39,9 +41,10 @@ export default async function PilotPage() {
 
   if (!user) redirect("/login?next=/pilot");
 
-  const [profile, affiliations] = await Promise.all([
+  const [profile, affiliations, impact] = await Promise.all([
     loadOwnPilotProfile(supabase, user.id),
     loadAffiliations(supabase),
+    loadPilotImpact(supabase, user.id).catch(() => null),
   ]);
 
   const status = STATUS_COPY[profile?.vettingStatus ?? "unverified"];
@@ -106,6 +109,19 @@ export default async function PilotPage() {
             </p>
           ) : null}
         </section>
+
+        {/* Their record comes before the form once there is one: a pilot
+            opening this page after a visit wants to see what they did, not a
+            form they already filled in. */}
+        {impact && impact.visits > 0 ? (
+          <section className="border-border bg-card mt-4 rounded-lg border p-6">
+            <h2 className="text-xl font-semibold">What you have done</h2>
+            <p className="text-muted-foreground mt-1 text-sm text-pretty">
+              Yours alone. There is no ranking here and there will not be one.
+            </p>
+            <ImpactPanel record={impact} audience="pilot" />
+          </section>
+        ) : null}
 
         <PilotProfileForm profile={profile} affiliations={affiliations} />
       </div>
