@@ -34,10 +34,10 @@ const KINDS = {
   cfi: {
     heading: "Volunteer, and keep us honest",
     blurb:
-      "Visit classrooms, and — if you are willing — check the ground school content before students see it.",
+      "Visit classrooms. And if you are willing, we may ask you to check our ground school content before students see it.",
     cardTitle: "I am a flight instructor",
     cardBlurb:
-      "Everything a professional pilot can do, plus the chance to review our questions and quiz cards.",
+      "Everything a professional pilot can do. We may also ask you to review our questions and quiz cards — that is something we switch on by hand, not a login you get automatically.",
     askDateOfBirth: false,
   },
   school: {

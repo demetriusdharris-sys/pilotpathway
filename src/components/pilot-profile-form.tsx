@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -29,6 +29,17 @@ const field =
 /**
  * A pilot's own profile.
  *
+ * EVERY FIELD IS CONTROLLED, ON PURPOSE. React 19 resets a form when its action
+ * finishes, which wipes uncontrolled inputs back to nothing — the same trap
+ * `auth-form.tsx` is controlled to avoid, and CLAUDE.md names it explicitly.
+ *
+ * It bit here in testing and it bit silently: a save that failed validation on
+ * the certificate number came back with "I am a flight instructor" unticked, so
+ * the next save wrote `is_cfi = false` and the pilot disappeared from the
+ * Flight instructors list on /admin. Nobody would have noticed from the screen —
+ * the checkbox simply looked unticked, which is indistinguishable from a pilot
+ * who never ticked it. Do not convert these back to defaultValue/defaultChecked.
+ *
  * Ordered deliberately: the story comes before the logistics. A pilot filling
  * this in should understand from the shape of the page that what a student needs
  * is who they are and how they got there, not their type ratings.
@@ -50,6 +61,48 @@ export function PilotProfileForm({
     {},
   );
 
+  const [displayName, setDisplayName] = useState(profile?.displayName ?? "");
+  const [jobTitle, setJobTitle] = useState(profile?.jobTitle ?? "");
+  const [employer, setEmployer] = useState(profile?.employer ?? "");
+  const [grewUpIn, setGrewUpIn] = useState(profile?.grewUpIn ?? "");
+  const [story, setStory] = useState(profile?.story ?? "");
+  const [wishIHadKnown, setWishIHadKnown] = useState(
+    profile?.wishIHadKnown ?? "",
+  );
+  const [routeIn, setRouteIn] = useState(profile?.routeIn ?? "");
+  const [firstInFamily, setFirstInFamily] = useState(
+    profile?.firstInFamily === true
+      ? "yes"
+      : profile?.firstInFamily === false
+        ? "no"
+        : "",
+  );
+  const [isCfi, setIsCfi] = useState(profile?.isCfi ?? false);
+  const [certificateNumber, setCertificateNumber] = useState(
+    profile?.certificateNumber ?? "",
+  );
+  const [languages, setLanguages] = useState(
+    profile?.languages.join(", ") ?? "",
+  );
+  const [chosen, setChosen] = useState<string[]>(profile?.affiliations ?? []);
+  const [homeCity, setHomeCity] = useState(profile?.homeCity ?? "");
+  const [homeState, setHomeState] = useState(profile?.homeState ?? "");
+  const [homeAirport, setHomeAirport] = useState(profile?.homeAirport ?? "");
+  const [travelRadius, setTravelRadius] = useState(
+    profile?.travelRadiusMiles?.toString() ?? "",
+  );
+  const [willDoVirtual, setWillDoVirtual] = useState(
+    profile?.willDoVirtual ?? true,
+  );
+
+  function toggleAffiliation(slug: string) {
+    setChosen((current) =>
+      current.includes(slug)
+        ? current.filter((entry) => entry !== slug)
+        : [...current, slug],
+    );
+  }
+
   return (
     <form action={formAction} className="mt-6 flex flex-col gap-8">
       <section>
@@ -64,7 +117,8 @@ export function PilotProfileForm({
             <Input
               id="displayName"
               name="displayName"
-              defaultValue={profile?.displayName ?? ""}
+              value={displayName}
+              onChange={(event) => setDisplayName(event.target.value)}
               placeholder="Captain Marcus Webb"
               required
             />
@@ -74,7 +128,8 @@ export function PilotProfileForm({
             <Input
               id="jobTitle"
               name="jobTitle"
-              defaultValue={profile?.jobTitle ?? ""}
+              value={jobTitle}
+              onChange={(event) => setJobTitle(event.target.value)}
               placeholder="First Officer, Boeing 737"
               required
             />
@@ -87,7 +142,8 @@ export function PilotProfileForm({
             <Input
               id="employer"
               name="employer"
-              defaultValue={profile?.employer ?? ""}
+              value={employer}
+              onChange={(event) => setEmployer(event.target.value)}
               placeholder="Southwest Airlines"
             />
           </div>
@@ -96,7 +152,8 @@ export function PilotProfileForm({
             <Input
               id="grewUpIn"
               name="grewUpIn"
-              defaultValue={profile?.grewUpIn ?? ""}
+              value={grewUpIn}
+              onChange={(event) => setGrewUpIn(event.target.value)}
               placeholder="Compton, California"
             />
             <p className="text-muted-foreground mt-1 text-xs">
@@ -120,7 +177,8 @@ export function PilotProfileForm({
             name="story"
             rows={6}
             maxLength={2000}
-            defaultValue={profile?.story ?? ""}
+            value={story}
+            onChange={(event) => setStory(event.target.value)}
             className={field}
             placeholder="I was nineteen and working at a car wash when somebody let me sit in the right seat of a Cessna…"
           />
@@ -135,7 +193,8 @@ export function PilotProfileForm({
             name="wishIHadKnown"
             rows={3}
             maxLength={500}
-            defaultValue={profile?.wishIHadKnown ?? ""}
+            value={wishIHadKnown}
+            onChange={(event) => setWishIHadKnown(event.target.value)}
             className={field}
             placeholder="That nobody was going to tap me on the shoulder and invite me in."
           />
@@ -147,7 +206,8 @@ export function PilotProfileForm({
             <select
               id="routeIn"
               name="routeIn"
-              defaultValue={profile?.routeIn ?? ""}
+              value={routeIn}
+              onChange={(event) => setRouteIn(event.target.value)}
               className={field}
             >
               <option value="">Prefer not to say</option>
@@ -163,13 +223,8 @@ export function PilotProfileForm({
             <select
               id="firstInFamily"
               name="firstInFamily"
-              defaultValue={
-                profile?.firstInFamily === true
-                  ? "yes"
-                  : profile?.firstInFamily === false
-                    ? "no"
-                    : ""
-              }
+              value={firstInFamily}
+              onChange={(event) => setFirstInFamily(event.target.value)}
               className={field}
             >
               <option value="">Prefer not to say</option>
@@ -200,9 +255,8 @@ export function PilotProfileForm({
                   type="checkbox"
                   name="affiliations"
                   value={affiliation.slug}
-                  defaultChecked={profile?.affiliations.includes(
-                    affiliation.slug,
-                  )}
+                  checked={chosen.includes(affiliation.slug)}
+                  onChange={() => toggleAffiliation(affiliation.slug)}
                   className="size-4"
                 />
                 {/* Full name first, acronym after. A student does not know what
@@ -227,15 +281,16 @@ export function PilotProfileForm({
             <input
               type="checkbox"
               name="isCfi"
-              defaultChecked={profile?.isCfi ?? false}
+              checked={isCfi}
+              onChange={(event) => setIsCfi(event.target.checked)}
               className="mt-0.5 size-4"
             />
             <span>
               I am a flight instructor
               <span className="text-muted-foreground mt-1 block text-xs text-pretty">
                 We are looking for CFIs to check our questions and quiz cards
-                before students see them. Ticking this puts you in front of us —
-                it does not give you anything to do yet.
+                before students see them. Ticking this only tells us — we would
+                ask you first, and access is something we switch on by hand.
               </span>
             </span>
           </label>
@@ -246,7 +301,8 @@ export function PilotProfileForm({
             <Input
               id="certificateNumber"
               name="certificateNumber"
-              defaultValue={profile?.certificateNumber ?? ""}
+              value={certificateNumber}
+              onChange={(event) => setCertificateNumber(event.target.value)}
               placeholder="1234567"
             />
             <p className="text-muted-foreground mt-1 text-xs text-pretty">
@@ -261,7 +317,8 @@ export function PilotProfileForm({
           <Input
             id="languages"
             name="languages"
-            defaultValue={profile?.languages.join(", ") ?? ""}
+            value={languages}
+            onChange={(event) => setLanguages(event.target.value)}
             placeholder="English, Spanish"
           />
           <p className="text-muted-foreground mt-1 text-xs">
@@ -281,7 +338,8 @@ export function PilotProfileForm({
             <Input
               id="homeCity"
               name="homeCity"
-              defaultValue={profile?.homeCity ?? ""}
+              value={homeCity}
+              onChange={(event) => setHomeCity(event.target.value)}
               placeholder="Long Beach"
             />
           </div>
@@ -291,7 +349,8 @@ export function PilotProfileForm({
               id="homeState"
               name="homeState"
               maxLength={2}
-              defaultValue={profile?.homeState ?? ""}
+              value={homeState}
+              onChange={(event) => setHomeState(event.target.value)}
               placeholder="CA"
             />
           </div>
@@ -301,7 +360,8 @@ export function PilotProfileForm({
               id="homeAirport"
               name="homeAirport"
               maxLength={4}
-              defaultValue={profile?.homeAirport ?? ""}
+              value={homeAirport}
+              onChange={(event) => setHomeAirport(event.target.value)}
               placeholder="LGB"
             />
           </div>
@@ -315,7 +375,8 @@ export function PilotProfileForm({
               type="number"
               min={0}
               max={3000}
-              defaultValue={profile?.travelRadiusMiles ?? ""}
+              value={travelRadius}
+              onChange={(event) => setTravelRadius(event.target.value)}
               placeholder="50"
             />
           </div>
@@ -325,7 +386,8 @@ export function PilotProfileForm({
           <input
             type="checkbox"
             name="willDoVirtual"
-            defaultChecked={profile?.willDoVirtual ?? true}
+            checked={willDoVirtual}
+            onChange={(event) => setWillDoVirtual(event.target.checked)}
             className="size-4"
           />
           I will also join a classroom by video
