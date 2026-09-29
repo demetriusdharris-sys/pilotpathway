@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isAdmin, setContentReviewer } from "@/lib/admin";
 import { setReportStatus } from "@/lib/content-reports";
+import { setPilotVetting } from "@/lib/pilots";
 import type { AuthState } from "@/app/(auth)/actions";
 
 /**
@@ -116,4 +117,63 @@ export async function triageReport(
   revalidatePath("/admin");
 
   return { message: "Saved." };
+}
+
+/**
+ * Records an attestation that a pilot's background check was done.
+ *
+ * The check itself is never entered and never stored — only that a named person
+ * confirmed it, and when it is due again. The FAA vets a pilot's flying, not
+ * their fitness to work with children, so this is a separate and deliberately
+ * human judgement.
+ */
+export async function vetPilot(
+  _prevState: AuthState,
+  formData: FormData,
+): Promise<AuthState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Please log in again." };
+  }
+
+  const email = String(formData.get("email") ?? "").trim();
+  const status = String(formData.get("status") ?? "");
+  const vettedBy = String(formData.get("vettedBy") ?? "").trim();
+  const expires = String(formData.get("expires") ?? "").trim();
+  const note = String(formData.get("note") ?? "").trim();
+
+  const allowed = ["unverified", "pending", "verified", "declined"] as const;
+
+  if (!email || !(allowed as readonly string[]).includes(status)) {
+    return { error: "Nothing was recorded." };
+  }
+
+  try {
+    const message = await setPilotVetting(
+      supabase,
+      email,
+      status as (typeof allowed)[number],
+      vettedBy,
+      expires || null,
+      note || null,
+    );
+
+    revalidatePath("/admin");
+
+    return { message };
+  } catch (error) {
+    const raised = error instanceof Error ? error.message : String(error);
+
+    console.error("Pilot vetting failed:", {
+      actorId: user.id,
+      status,
+      error: raised,
+    });
+
+    return { error: raised };
+  }
 }

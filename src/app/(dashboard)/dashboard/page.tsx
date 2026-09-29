@@ -8,6 +8,7 @@ import { loadCurriculum } from "@/lib/curriculum-store";
 import { loadStaffOrganizations } from "@/lib/school-roster";
 import { isReviewer } from "@/lib/practice/review";
 import { isAdmin } from "@/lib/admin";
+import { loadOwnPilotProfile } from "@/lib/pilots";
 import {
   loadAssessableObjectives,
   loadMastery,
@@ -71,6 +72,18 @@ export default async function DashboardPage() {
     isAdmin(supabase),
   ]);
 
+  // A pilot mentor gets a way back to their own profile. Being one is the
+  // existence of the row, not a role — see 0033 and 0034. Fails soft to no link.
+  let isPilot = false;
+  try {
+    isPilot = (await loadOwnPilotProfile(supabase, user.id)) !== null;
+  } catch (error) {
+    console.error("Failed to check for a pilot profile:", {
+      userId: user.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
   // Every account created before the age gate has no date of birth, and
   // is_adult() treats unknown age as a minor. Nothing else ever sends those
   // students to the profile page, so they would stay unable to approve
@@ -121,6 +134,14 @@ export default async function DashboardPage() {
                 className="text-muted-foreground hover:text-foreground text-sm font-medium underline-offset-4 hover:underline"
               >
                 Review
+              </Link>
+            ) : null}
+            {isPilot ? (
+              <Link
+                href="/pilot"
+                className="text-muted-foreground hover:text-foreground text-sm font-medium underline-offset-4 hover:underline"
+              >
+                Your pilot profile
               </Link>
             ) : null}
             {canAdminister ? (

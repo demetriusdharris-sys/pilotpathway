@@ -9,6 +9,8 @@ import { loadReviewCounts } from "@/lib/practice/review";
 import { loadCardReviewCounts } from "@/lib/card-review";
 import { countReportsByStatus, loadReports } from "@/lib/content-reports";
 import { loadActivity } from "@/lib/activity";
+import { loadAllPilots } from "@/lib/pilots";
+import { PilotVettingForm } from "@/components/pilot-vetting-form";
 import { ReportTriage } from "@/components/report-triage";
 import { ReviewerAccessForm } from "@/components/reviewer-access-form";
 import { SignOutButton } from "@/components/sign-out-button";
@@ -75,6 +77,7 @@ export default async function AdminPage() {
     reports,
     reportCounts,
     activity,
+    pilots,
   ] = await Promise.all([
     loadStaffAccounts(admin),
     getBankHealth(supabase),
@@ -83,6 +86,7 @@ export default async function AdminPage() {
     loadReports(admin, "new"),
     countReportsByStatus(admin),
     loadActivity(admin),
+    loadAllPilots(admin),
   ]);
 
   const thin = health.filter((entry) => entry.approved < entry.slots);
@@ -132,6 +136,44 @@ export default async function AdminPage() {
             those stay hand-written statements, where they are visible. Every
             change made here is recorded permanently.
           </p>
+        </section>
+
+        {/* ------------------------------------------------------------ */}
+        <section className="border-border bg-card mt-4 rounded-lg border p-6">
+          <h2 className="text-xl font-semibold">
+            Pilot mentors{" "}
+            {pilots.filter((p) => p.profile.vettingStatus !== "verified")
+              .length > 0 ? (
+              <span className="text-gold-strong tabular-nums">
+                {
+                  pilots.filter((p) => p.profile.vettingStatus !== "verified")
+                    .length
+                }
+              </span>
+            ) : null}
+          </h2>
+          <p className="text-muted-foreground mt-1 text-sm text-pretty">
+            A school only ever sees a pilot marked cleared. The background check
+            itself is never stored here — what is recorded is that a named
+            person confirmed one was done, and when it is due again.
+          </p>
+
+          {pilots.length === 0 ? (
+            <p className="text-muted-foreground mt-3 text-sm text-pretty">
+              Nobody has made a pilot profile yet. Send a pilot to{" "}
+              <code>/pilot</code> and they can fill one in.
+            </p>
+          ) : (
+            <ul className="mt-4 flex flex-col gap-3">
+              {pilots.map((entry) => (
+                <PilotVettingForm
+                  key={entry.profile.userId}
+                  profile={entry.profile}
+                  email={entry.email}
+                />
+              ))}
+            </ul>
+          )}
         </section>
 
         {/* ------------------------------------------------------------ */}
