@@ -8,6 +8,7 @@ import { getBankHealth } from "@/lib/practice/assemble";
 import { loadReviewCounts } from "@/lib/practice/review";
 import { loadCardReviewCounts } from "@/lib/card-review";
 import { countReportsByStatus, loadReports } from "@/lib/content-reports";
+import { loadActivity } from "@/lib/activity";
 import { ReportTriage } from "@/components/report-triage";
 import { ReviewerAccessForm } from "@/components/reviewer-access-form";
 import { SignOutButton } from "@/components/sign-out-button";
@@ -59,15 +60,23 @@ export default async function AdminPage() {
     throw new Error("The admin page is unavailable right now.");
   }
 
-  const [staff, health, questionCounts, cardCounts, reports, reportCounts] =
-    await Promise.all([
-      loadStaffAccounts(admin),
-      getBankHealth(supabase),
-      loadReviewCounts(admin),
-      loadCardReviewCounts(admin),
-      loadReports(admin, "new"),
-      countReportsByStatus(admin),
-    ]);
+  const [
+    staff,
+    health,
+    questionCounts,
+    cardCounts,
+    reports,
+    reportCounts,
+    activity,
+  ] = await Promise.all([
+    loadStaffAccounts(admin),
+    getBankHealth(supabase),
+    loadReviewCounts(admin),
+    loadCardReviewCounts(admin),
+    loadReports(admin, "new"),
+    countReportsByStatus(admin),
+    loadActivity(admin),
+  ]);
 
   const thin = health.filter((entry) => entry.approved < entry.slots);
   const totalApproved = health.reduce((sum, entry) => sum + entry.approved, 0);
@@ -150,6 +159,105 @@ export default async function AdminPage() {
             Students are not listed. Nothing here needs a directory of their
             email addresses, and most of them are minors.
           </p>
+        </section>
+
+        {/* ------------------------------------------------------------ */}
+        <section className="border-border bg-card mt-8 rounded-lg border p-6">
+          <h2 className="text-xl font-semibold">What has been happening</h2>
+          <p className="text-muted-foreground mt-1 text-sm text-pretty">
+            Counts and totals only — there is no per-student breakdown here, and
+            there should not be one.
+          </p>
+
+          <div className="mt-4 grid gap-6 sm:grid-cols-2">
+            {[activity.week, activity.month].map((window) => (
+              <div key={window.days}>
+                <p className="text-xs font-semibold tracking-[0.08em] uppercase">
+                  Last {window.days} days
+                </p>
+                <dl className="mt-2 flex flex-col gap-1 text-sm">
+                  <Stat
+                    label="Students who asked something"
+                    value={window.activeStudents}
+                  />
+                  <Stat label="Tutor messages" value={window.tutorMessages} />
+                  <Stat label="New accounts" value={window.signups} />
+                  <Stat label="Quiz answers" value={window.quizAnswers} />
+                  <Stat
+                    label="Practice tests started"
+                    value={window.practiceAttempts}
+                  />
+                  <Stat
+                    label="Tutor spend"
+                    value={`$${(window.spendCents / 100).toFixed(2)}`}
+                  />
+                </dl>
+              </div>
+            ))}
+          </div>
+
+          <div className="border-border mt-6 border-t pt-4">
+            <p className="text-xs font-semibold tracking-[0.08em] uppercase">
+              How far people get
+            </p>
+            <p className="text-muted-foreground mt-1 text-xs text-pretty">
+              Each step is a subset of the one above it. Where the numbers drop
+              is where to look.
+            </p>
+            <dl className="mt-2 flex flex-col gap-1 text-sm">
+              <Stat label="Accounts" value={activity.funnel.accounts} />
+              <Stat
+                label="Asked the tutor something"
+                value={activity.funnel.started}
+              />
+              <Stat
+                label="Marked a lesson complete"
+                value={activity.funnel.completedALesson}
+              />
+              <Stat
+                label="Answered a quiz"
+                value={activity.funnel.answeredAQuiz}
+              />
+              <Stat
+                label="Showed an objective"
+                value={activity.funnel.showedAnObjective}
+              />
+            </dl>
+          </div>
+
+          <div className="border-border mt-6 border-t pt-4">
+            <p className="text-xs font-semibold tracking-[0.08em] uppercase">
+              Cost and caps
+            </p>
+            <dl className="mt-2 flex flex-col gap-1 text-sm">
+              <Stat
+                label="Tutor spend, all time"
+                value={`$${(activity.allTimeSpendCents / 100).toFixed(2)}`}
+              />
+              <Stat
+                label="Busiest day so far"
+                value={
+                  activity.busiestDay
+                    ? `${activity.busiestDay.messages} messages on ${activity.busiestDay.day}`
+                    : "no messages yet"
+                }
+              />
+              <Stat
+                label="Cap per student per day"
+                value={activity.limits.dailyPerUser ?? "not set"}
+              />
+              <Stat
+                label="Cap across everyone per day"
+                value={activity.limits.globalDaily ?? "not set"}
+              />
+            </dl>
+            <p className="text-muted-foreground mt-2 text-xs text-pretty">
+              Both caps live in <code>usage_limits</code> and change with no
+              deploy. Errors are not here — those are in the Vercel runtime
+              logs, and a student quoting a reference code from an error page is
+              what makes one findable.
+            </p>
+          </div>
         </section>
 
         {/* ------------------------------------------------------------ */}
@@ -263,5 +371,15 @@ export default async function AdminPage() {
         </section>
       </div>
     </main>
+  );
+}
+
+/** One label and one number. Local to this page; nothing else needs it. */
+function Stat({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="flex flex-wrap items-baseline justify-between gap-2">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="font-medium tabular-nums">{value}</dd>
+    </div>
   );
 }
