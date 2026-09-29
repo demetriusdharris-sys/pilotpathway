@@ -30,6 +30,8 @@ declare
   v_open  uuid;
   v_code  text;
   v_msg   text;
+  v_before boolean;
+  v_after  boolean;
 begin
   select id into v_admin   from public.profiles where lower(email) = 'demetriusdharris@gmail.com';
   select id into v_teacher from public.profiles where lower(email) = 'demetriusdharris+test7@gmail.com';
@@ -68,6 +70,12 @@ begin
   v_msg := public.confirm_classroom_visit(v_visit, v_pilot, now() + interval '10 days');
 
   select code into v_code from public.classroom_visits where id = v_visit;
+
+  -- What this school could already see about this student, before any code is
+  -- claimed. Measured rather than assumed: +minor has carried a live
+  -- school_progress consent for another school since September, so asking
+  -- "can they see them at all" would answer a different question.
+  v_before := public.staff_may_see_progress(v_student);
 
   insert into attribution_results values (
     1, 'Confirming a visit generates a code',
@@ -111,14 +119,31 @@ begin
   where organization_id = v_org and user_id = v_student;
 
   -- ---------------------------------------------------------------
-  -- 7. And it grants that school no view of their progress.
+  -- 7. And it creates no consent naming that school.
+  --
+  -- The precise claim, rather than "can this school see this student", which
+  -- would answer a question about unrelated history.
+  -- ---------------------------------------------------------------
+  insert into attribution_results
+  select 7, 'Claiming a code creates no consent naming that school',
+    case when count(*) = 0 then 'PASS' else 'FAIL' end,
+    format('%s consent row(s) for the test school', count(*))
+  from public.consent
+  where subject_user_id = v_student and audience_org_id = v_org;
+
+  -- ---------------------------------------------------------------
+  -- 7b. And it changes nothing about what anyone can see.
+  --
+  -- Before and after, so the answer does not depend on what this account could
+  -- already see. This is the assertion that actually protects the student.
   -- ---------------------------------------------------------------
   perform set_config('request.jwt.claims', json_build_object('sub', v_admin)::text, true);
+  v_after := public.staff_may_see_progress(v_student);
 
   insert into attribution_results values (
-    7, 'Claiming a code gives the school no view of their progress',
-    case when public.staff_may_see_progress(v_student) then 'FAIL' else 'PASS' end,
-    'staff_may_see_progress()'
+    8, 'Claiming a code changes nothing about who can see their progress',
+    case when v_before = v_after then 'PASS' else 'FAIL' end,
+    format('before=%s after=%s', v_before, v_after)
   );
 
   -- ---------------------------------------------------------------
@@ -128,7 +153,7 @@ begin
   v_msg := public.claim_visit_code(v_code);
 
   insert into attribution_results
-  select 8, 'A second claim changes nothing',
+  select 9, 'A second claim changes nothing',
     case when count(*) = 1 then 'PASS' else 'FAIL' end,
     v_msg
   from public.visit_signups where user_id = v_student;
@@ -138,16 +163,16 @@ begin
   -- ---------------------------------------------------------------
   begin
     perform public.claim_visit_code('ZZZZZZ');
-    insert into attribution_results values (9, 'An unknown code is refused', 'FAIL', 'it was accepted');
+    insert into attribution_results values (10, 'An unknown code is refused', 'FAIL', 'it was accepted');
   exception when others then
-    insert into attribution_results values (9, 'An unknown code is refused', 'PASS', sqlerrm);
+    insert into attribution_results values (10, 'An unknown code is refused', 'PASS', sqlerrm);
   end;
 
   -- ---------------------------------------------------------------
   -- 10. An open visit has no code to claim.
   -- ---------------------------------------------------------------
   insert into attribution_results
-  select 10, 'An unconfirmed visit has no code',
+  select 11, 'An unconfirmed visit has no code',
     case when code is null then 'PASS' else 'FAIL' end,
     coalesce(code, 'null')
   from public.classroom_visits where id = v_open;
@@ -163,7 +188,7 @@ begin
   delete from public.organization_members where organization_id = v_org;
   delete from public.organizations where id = v_org;
 
-  insert into attribution_results values (11, 'Cleaned up after itself', 'PASS',
+  insert into attribution_results values (12, 'Cleaned up after itself', 'PASS',
     'school, visits and attribution removed');
 
 exception when others then
