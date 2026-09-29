@@ -288,15 +288,56 @@ Closes rule 6 of the practice-test spec. A weak ACS code already linked to its l
 
 ---
 
+## Reviewing is a capability, not a role — migration `0033`
+
+`may_review_content()` granted card and question approval to anyone whose `profiles.role` was `mentor`, because a CFI reviewer was the only thing `mentor` meant. **The mentorship hub makes `mentor` mean a working pilot who volunteers in a classroom**, so every volunteer would silently have gained the power to approve safety content. No account held it when this was fixed, which is why it was cheap then and would have been expensive after the first volunteer signed up.
+
+**Renaming the role would not have fixed it.** A single-valued enum cannot say "both", and both is the likely case: a CFI who visits classrooms *and* reviews questions is one person with two capabilities. Same reasoning as `0007` — "is a guardian" is not a useful fact, "is guardian of this student" is — and why org roles live in `organization_members` rather than on `profiles`.
+
+**Verified on the live site Sep 29 2026:** granting `+test7` showed them as **Reviewer** and opened `/review/cards` with a dashboard link; granting twice said "can already review"; granting the founder said "is an administrator and can already review" and wrote no row; revoking locked them out again. The record read one row, granted 18:00:29 and revoked 18:02:42 with the actor's email on both ends, `+test7` back to plain `student`, and zero accounts holding `mentor`.
+
+- **Grants are never deleted; revocation sets `revoked_at`**, the same shape as `consent`, because a separate revocation row would deactivate nothing. A partial unique index allows one live grant per person, so access can be given again without erasing that it was taken away. The protect trigger binds the service role and permits only a revocation.
+- **Admins review regardless.** They can grant the capability, so withholding it from them would be theatre — and `set_content_reviewer` writes no row for one, saying so instead.
+- **`set_reviewer_role` is dropped, not left behind.** After `0033` it would look like it granted review access and would not, which is the worst kind of leftover. `role_grants` from `0031` stays for whatever role changes remain.
+- **The admin page labels accounts by what they can do, not what they are called**, because the two have now come apart.
+- **`mentor` is reserved for the mentorship hub and grants nothing today.** Do not attach a capability to it again.
+
+---
+
+## What has been happening — `/admin`
+
+`tutor_usage` had recorded a message count and a cost per student per day since September and nothing read it. Two windows (7 and 30 days), a drop-off funnel from account to a shown objective, all-time spend, the busiest day against the global cap, and both caps themselves so they can be read without SQL. Read by `src/lib/activity.ts`.
+
+**Verified against the database Sep 29 2026**, every figure recomputed independently and matched: 2 and 4 active students, 4 and 25 tutor messages, $0.04 and $0.28 spend, 9 accounts then 4 asked the tutor, 1 completed a lesson, 1 answered a quiz, 1 showed an objective. **All tutor usage ever has cost $0.37**, which confirms the ~0.48¢ per exchange measurement and means cost is not a constraint on beta size — 30 students at 20 messages each is about $3.
+
+- **Aggregate only, and there must never be a per-student row.** A screen listing what each named student did, most of them minors, is a surveillance tool that nothing on this page needs. A student's own detail belongs to them, and to school staff only through consent.
+- **Errors are deliberately absent.** They live in the Vercel runtime logs, and the reference code on the error page is what makes a specific one findable; a half-real version here would be worse than saying where they are.
+- **The funnel is the number to watch.** If twenty accounts produce three people who asked the tutor anything, the problem is onboarding rather than content — a distinction that cannot be made without it.
+
+---
+
+## Student problem reports — migration `0032`
+
+A student can say "this looks wrong" on a quiz card, on a practice question after grading, and on a tutor reply. Triaged on `/admin`. **The tutor is the surface that matters most**: cards and questions are read by a CFI before any student sees them, but Captain Path generates fresh text every turn and "never invent regulations" is a prompt instruction rather than a guarantee.
+
+**Built and pushed Sep 24 2026, not yet exercised live.**
+
+- **A report never changes content state, and must not learn to.** Flipping a reported card to `needs_changes` so it reaches the CFI automatically would let any student remove content from every other student — a denial of service on the curriculum, available to anyone with an account. A person triages; sending a card back stays a decision made in the review queue with the card in front of them.
+- **`0032` snapshots what the student was looking at.** A card's wording can be edited before anyone triages the report, so the row alone could not say what was on screen. A tutor reply has no id the browser could send, so for those the excerpt *is* the content, and its identity is a hash of that text computed server-side — which is what makes the one-per-person index work for generated content.
+- **Capped at 20 a day per account, one report per person per item.** "You have already reported this one" is said as a fact rather than a failure: they did the right thing.
+- **RLS on with no policies.** Writes go through a Server Action with the service role, which is what lets the cap and the duplicate check live in one place and stops a student setting `status` or `triage_note` so a report arrives pre-triaged.
+
+---
+
 ## Admin — migration `0031` and `/admin`
 
 The operational things that used to need a hand-written SQL statement. Reached from a dashboard link shown when `may_administer()` is true. **Verified on the live site Sep 24 2026:** granting `+test7` reviewer access worked and they appeared under "Who has access", removing it dropped them off, changing the founder's own role was refused, and an unknown address was refused — with both changes recorded in `role_grants` with the actor's email.
 
-What it does: grant or remove reviewer access by email, show both review queue counts, and show bank health per area — `getBankHealth()` had no interface at all before this.
+What it does: grant or remove reviewer access by email (**through `0033`'s capability since Sep 29 2026, not the role this migration set**), show both review queue counts, show bank health per area — `getBankHealth()` had no interface at all before this — plus the activity panel and the report queue described above.
 
 ### Locked design decisions
 
-- **The page cannot create an `admin`, change an existing `admin`, change a `school_admin`, or change the caller's own role.** Only `student` and `mentor` are settable, so a compromised admin session cannot mint more of itself, and the one role that can grant roles stays a visible hand-written statement. Self-demotion by misclick is a support problem with no upside.
+- **The page cannot create an `admin`, change an existing `admin`, or change a `school_admin`.** Admin stays a visible hand-written statement, so a compromised admin session cannot mint more of itself. Since `0033` the page does not set roles at all — it grants and revokes a capability — so self-demotion is no longer reachable either.
 - **`role` is still outside the profile write allowlist.** `0031` grants no update on the column to anybody; `set_reviewer_role` is SECURITY DEFINER and checks the caller. `0005`'s column grant is untouched and remains what stops a student PATCHing their own role.
 - **Every role change is recorded in `role_grants`, and the record cannot be deleted or altered** — a `BEFORE DELETE`/`BEFORE UPDATE` trigger that binds the service role too, the same protection as `guardian_actions`. Granting the power to approve safety content is the most consequential thing one account can do to another, and it should not rest on anybody's memory. The insert is in the same transaction as the role change, so there is no untraced grant: if the record cannot be written, the change rolls back.
 - **No foreign keys to `auth.users`, and both emails are copied in.** The record has to outlive both accounts, and an id alone identifies nobody once an account is deleted. Same reasoning as `0019`.
