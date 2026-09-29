@@ -348,6 +348,51 @@ What it does: grant or remove reviewer access by email (**through `0033`'s capab
 
 ---
 
+## The classroom visit funnel — migrations `0034`–`0040`
+
+A working pilot speaks to a classroom; the students who are interested sign up for the ground school. The hub is the front door and the ground school is the building. Notes on what the product is, and what the pitch demo says, are in `docs/mentorship-hub-notes.md`.
+
+**Verified Sep 29 2026 by `supabase/tests/visit-lifecycle.sql` — 18 of 18 checks passed.** That script impersonates each account by setting `request.jwt.claims`, which is what `auth.uid()` reads, so a SECURITY DEFINER function believes a given person is calling it. **Prefer this to click-through testing**: it covers every gate and refusal in one paste, it is re-runnable, and it cleans up after itself. What it does not cover is React — the pages, forms and wizard still need eyes.
+
+### The pieces
+
+| Migration | What it adds |
+|---|---|
+| `0034` | `pilot_profiles` — who a pilot is, and whether somebody has attested to a background check |
+| `0035` | Affiliation names in full, and a slug correction (`naacp_aviation` was the Tuskegee Airmen) |
+| `0036` | `classroom_visits`, `visit_volunteers`, and the six functions that move a visit through its life |
+| `0037` | A verified pilot may read the name of a school that has asked for a visit |
+| `0038` | Schools and staff without a SQL paste, plus `organization_member_changes` |
+| `0039` | A teacher sets up their own school; verification gates enrolment and confirmation |
+| `0040` | `is_cfi` and a certificate number, so a CFI who signs up becomes a list rather than a search |
+
+### Locked design decisions
+
+- **Being a pilot mentor is the existence of a `pilot_profiles` row, not a role.** Same reasoning as `0033`: one person can be a pilot, a teacher and a content reviewer, and a single-valued role cannot say so. `mentor` in the enum still grants nothing.
+- **No race or gender fields, though representation is the point.** Storing demographics would make this a register of protected characteristics on volunteers, and a school selecting a person by race is legally loaded however good the intent. **Affiliations do the same work better** — a pilot who lists OBAP, Sisters of the Skies, the Latino Pilots Association or NGPA has told a student exactly what they need to know, self-chosen and already public. Paired with where they grew up, how they got their training, whether they were first in their family, and their story in their own words, a student meets a person rather than a demographic match. If a school ever needs more, the answer is a conversation rather than a filter.
+- **The vetting columns are ungranted, and that is the most important line in `0034`.** RLS restricts rows, not columns, so without it a pilot could PATCH their own `vetting_status` to `verified` and walk into a classroom. Three layers now: the form does not show the fields, the action does not name them, the grant would refuse them.
+- **We record the attestation, never the check.** No background check report, no document, no reference number — only that a named person confirmed one, and when it is due again. The FAA vets a pilot's flying, not their fitness to work with children.
+- **A visit cannot be confirmed with an unvetted pilot or an unverified school.** Both are enforced in the function, so the message explains itself, and again in a trigger, so no later code path can route around them. Both sides are checked before anybody travels.
+- **Attendance is the school's number, never the pilot's.** `complete_classroom_visit` is staff-only: the teacher was in the room and counted, and a volunteer has every incentive to round up however honest they are. That figure becomes a sponsor's renewal number, and unverified data in a sponsor report is a trust event you do not recover from.
+- **Nothing in a visit touches a student.** A visit knows a school, a teacher, a pilot, a date and a headcount. No student is named, enrolled or linked — which is why this carries far less youth-safety software risk than live video would.
+- **A school registers itself; verification gates what it can do.** Creating one is open because asking for a pilot touches no student. **Enrolment is the gate**, because it is the only route to a student's progress: staff see a student only if that student is enrolled *and* consents to `school_progress` naming that organisation. One unverified school per person, because a form that can be run in a loop is a way to fill the table.
+- **Removing somebody from a school is a hard delete.** A soft delete would mean `is_staff_of`, `shares_org_with`, `staff_may_see_progress` and the `0021` policies all had to learn to exclude removed rows, and a gate that forgets leaves a removed teacher reading a minor's progress. Deleting ends access immediately; history lives in `organization_member_changes`, which cannot be deleted or altered.
+- **A record, never a ranking.** The business rules forbid a mentor leaderboard because it punishes whoever took the hardest assignment — the pilot who drives three hours to a rural school loses to one doing eight easy visits near home. `ImpactPanel` shows a pilot their own figures with no ordering and nothing implying anyone else's exist. Schools get the same panel. Every headcount in it was entered by the school, which is what makes it worth putting on a professional record.
+- **Signing up names what you are, and it is a router rather than a permission.** Student, CFI, professional pilot or school. A self-declared CFI cannot approve content and a self-declared pilot cannot enter a classroom; the declaration only puts somebody in front of a person. The age gate applies to students only — a 44-year-old captain proving they are over 13 is the wrong question, and unknown age already fails closed everywhere it matters.
+- **Pilots do not get the ground school.** They land on `/pilot`, which leads with what they have done. The dashboard redirects them — but never an administrator, and never someone with lesson progress, so nobody is bounced off a page they were using.
+- **Onboarding is a wizard on first run and the whole page afterwards.** One topic per screen with "Step 2 of 4 · about 3 minutes", because that pacing is what makes the pitch demo feel lighter; editing shows everything, because hunting through four steps for one field is worse than scrolling.
+
+### What bit, and what to remember
+
+- **`current_role` is a reserved SQL keyword.** The column is `job_title`.
+- **The pilot profile form must stay controlled.** React 19 wipes uncontrolled fields when a form action finishes — the same trap `auth-form.tsx` is controlled to avoid. It bit here and it bit silently: a save that failed validation came back with "I am a flight instructor" unticked, so the next save wrote `is_cfi = false` and the pilot vanished from the admin list. An unticked box looks exactly like a pilot who never ticked it, so nobody would have noticed from the screen. **Do not convert these back to `defaultValue`.**
+- **`0006`'s policy on `organizations` is "you may read one you are a member of"**, which left a volunteering pilot seeing "A school" instead of a name. `0037` fixes it narrowly. Found by reading the policy, not by waiting for it to look broken.
+- **The certificate number field must reject a name.** It exists so a person can look the number up in the FAA airman registry; "Demetrius Harris, Admin" is what gets typed there by anyone who has been writing a reviewer credential all week.
+
+**Still to build:** stage 3, the per-visit code that attributes a student signup to the visit that reached them — the sentence a sponsor renews on is "your funded visit produced 14 signups, 9 of whom finished Stage 1", and nothing in the app can produce it yet. Then the student-facing thread, so a pilot's story stays visible to the students who met them. A photo on a pilot profile is wanted and not built: it needs storage, type and size checks, and a decision about showing a volunteer's face to students.
+
+---
+
 ## Beta readiness — Sep 23 2026
 
 **Password reset**, `/forgot-password` → recovery email → `/reset-password`. **Verified on the live site Sep 23 2026 by resetting a password on a phone**, which is the case the design exists for. The callback already accepted `recovery` as an OTP type, so no code changed there. **The Supabase Reset Password template had to change to `{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=recovery`** for exactly the reason the signup template did — the default is a PKCE link that only works in the browser that asked for the reset, and a locked-out student on a phone has no other way in. Both templates are recorded in `docs/auth-email-templates.md`.
