@@ -44,7 +44,7 @@ export default async function DashboardPage() {
       getProgress(user.id),
       supabase
         .from("profiles")
-        .select("date_of_birth")
+        .select("date_of_birth, first_name")
         .eq("id", user.id)
         .maybeSingle(),
       loadCurriculum(supabase),
@@ -131,6 +131,11 @@ export default async function DashboardPage() {
   const isMinor =
     dateOfBirth !== null && !hasReachedAge(dateOfBirth, ADULT_AGE_YEARS);
 
+  const firstName =
+    typeof profileResult.data?.first_name === "string"
+      ? profileResult.data.first_name.trim()
+      : "";
+
   let guardianState: "none" | "pending" | "verified" = "none";
 
   if (isMinor) {
@@ -158,6 +163,13 @@ export default async function DashboardPage() {
   if (stages.length === 0) {
     throw new Error("The curriculum could not be loaded.");
   }
+
+  // Somebody who has touched nothing yet. The dashboard is sixteen identical
+  // rows marked "Not started", which tells a sixteen-year-old neither where to
+  // begin nor that there is an instructor inside — and the drop from "made an
+  // account" to "asked the tutor something" is the number the activity panel
+  // exists to watch.
+  const hasStartedAnything = progress.size > 0;
 
   // A stage appears in full as soon as it has at least one lesson in the
   // database, so adding lessons to Stage 2 or 3 in the Table Editor shows them
@@ -234,7 +246,9 @@ export default async function DashboardPage() {
       </header>
 
       <div className="mx-auto w-full max-w-4xl px-6 py-12">
-        <h1 className="text-3xl font-semibold">Welcome</h1>
+        <h1 className="text-3xl font-semibold">
+          {firstName ? `Welcome, ${firstName}` : "Welcome"}
+        </h1>
         <p className="text-muted-foreground mt-2 text-sm">{user.email}</p>
 
         {/* One banner at a time. A student with no date of birth is asked for
@@ -285,6 +299,41 @@ export default async function DashboardPage() {
             >
               <Link href="/profile">Add it now</Link>
             </Button>
+          </section>
+        ) : null}
+
+        {!hasStartedAnything && openStages[0]?.lessons[0] ? (
+          <section className="border-border bg-card mt-8 rounded-lg border p-6">
+            <span className="text-gold-strong text-xs font-semibold tracking-[0.15em] uppercase">
+              Start here
+            </span>
+            <h2 className="mt-1 text-xl font-semibold">
+              {openStages[0].lessons[0].title}
+            </h2>
+            <p className="text-muted-foreground mt-2 text-sm text-pretty">
+              {openStages[0].lessons[0].summary}
+            </p>
+            <p className="mt-3 text-sm text-pretty">
+              Every lesson has an instructor in it called Captain Path. Ask it
+              anything — including the things you would feel stupid asking out
+              loud. That is what it is for, and nobody else sees it.
+            </p>
+            <div className="mt-5">
+              <Button
+                asChild
+                className="bg-gold text-gold-foreground hover:bg-gold/90"
+              >
+                <Link
+                  href={`/stages/${openStages[0].slug}/${openStages[0].lessons[0].slug}`}
+                >
+                  Open the first lesson
+                </Link>
+              </Button>
+            </div>
+            <p className="text-muted-foreground mt-4 text-xs text-pretty">
+              There is no order you have to follow and nothing to pay. Sixteen
+              lessons in Stage 1, and you can stop and come back whenever.
+            </p>
           </section>
         ) : null}
 
