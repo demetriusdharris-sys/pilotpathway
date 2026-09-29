@@ -9,6 +9,8 @@ import { loadStaffOrganizations } from "@/lib/school-roster";
 import { isReviewer } from "@/lib/practice/review";
 import { isAdmin } from "@/lib/admin";
 import { loadOwnPilotProfile } from "@/lib/pilots";
+import { loadGuardianLinks } from "@/lib/guardian-links";
+import { ADULT_AGE_YEARS, hasReachedAge } from "@/lib/date-of-birth";
 import {
   loadAssessableObjectives,
   loadMastery,
@@ -109,6 +111,48 @@ export default async function DashboardPage() {
     !profileResult.error &&
     typeof profileResult.data?.date_of_birth !== "string";
 
+  // A student under 18 with nobody on file.
+  //
+  // This is a prompt and never a gate. The ground school is free to everyone
+  // permanently and a minor is not locked out of learning while a parent gets
+  // round to an email — that would fall hardest on exactly the students this
+  // exists for. What a guardian unlocks is the things that need their say:
+  // sharing progress with a school, and live sessions when those are built.
+  //
+  // It matters more now than it did: students arriving from a classroom visit
+  // are school-age in bulk, so the guardian flow stops being an edge case and
+  // becomes the common path. Burying it on the profile page would mean almost
+  // nobody ever does it.
+  const dateOfBirth =
+    typeof profileResult.data?.date_of_birth === "string"
+      ? profileResult.data.date_of_birth
+      : null;
+
+  const isMinor =
+    dateOfBirth !== null && !hasReachedAge(dateOfBirth, ADULT_AGE_YEARS);
+
+  let guardianState: "none" | "pending" | "verified" = "none";
+
+  if (isMinor) {
+    try {
+      const links = await loadGuardianLinks(supabase, user.id);
+
+      if (links.some((link) => link.status === "verified")) {
+        guardianState = "verified";
+      } else if (links.length > 0) {
+        guardianState = "pending";
+      }
+    } catch (error) {
+      // A failed read shows no prompt rather than nagging a student over our
+      // own error. They can still reach it from the profile page.
+      console.error("Could not read guardian links:", {
+        userId: user.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      guardianState = "verified";
+    }
+  }
+
   // No stages means the curriculum could not be read. Fail loudly rather than
   // render an empty dashboard that looks like there is nothing to learn.
   if (stages.length === 0) {
@@ -192,6 +236,39 @@ export default async function DashboardPage() {
       <div className="mx-auto w-full max-w-4xl px-6 py-12">
         <h1 className="text-3xl font-semibold">Welcome</h1>
         <p className="text-muted-foreground mt-2 text-sm">{user.email}</p>
+
+        {/* One banner at a time. A student with no date of birth is asked for
+            that first, because the guardian question cannot even be asked
+            without it. */}
+        {!needsDateOfBirth && isMinor && guardianState !== "verified" ? (
+          <section className="border-gold/40 bg-gold/10 mt-8 flex flex-col gap-3 rounded-lg border p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="font-semibold">
+                {guardianState === "pending"
+                  ? "Waiting on your parent or guardian"
+                  : "Add a parent or guardian"}
+              </h2>
+              <p className="text-muted-foreground mt-1 text-sm text-pretty">
+                {guardianState === "pending"
+                  ? "We have emailed them. Until they confirm, a few things stay switched off — your lessons are not among them."
+                  : "Because you are under 18, a parent or guardian confirms a few things on your behalf. It takes them one click. Your ground school stays open either way."}
+              </p>
+            </div>
+            <Button
+              asChild
+              variant={guardianState === "pending" ? "outline" : "default"}
+              className={
+                guardianState === "pending"
+                  ? "shrink-0"
+                  : "bg-gold text-gold-foreground hover:bg-gold/90 shrink-0"
+              }
+            >
+              <Link href="/profile">
+                {guardianState === "pending" ? "Check on it" : "Ask them now"}
+              </Link>
+            </Button>
+          </section>
+        ) : null}
 
         {needsDateOfBirth ? (
           <section className="border-gold/40 bg-gold/10 mt-8 flex flex-col gap-3 rounded-lg border p-5 sm:flex-row sm:items-center sm:justify-between">
