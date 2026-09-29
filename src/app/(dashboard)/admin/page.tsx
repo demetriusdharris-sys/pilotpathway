@@ -17,11 +17,18 @@ export const metadata = {
   title: "Admin — PilotPathway.ai",
 };
 
-const ROLE_LABEL: Record<string, string> = {
-  mentor: "Reviewer",
-  admin: "Administrator",
-  school_admin: "School administrator",
-};
+/** What this account can do, rather than what it is called. */
+function capabilities(account: { role: string; mayReview: boolean }): string {
+  const held: string[] = [];
+  if (account.role === "admin") held.push("Administrator");
+  if (account.role === "school_admin") held.push("School administrator");
+  if (account.mayReview) held.push("Reviewer");
+  // An admin reviews regardless, so say so rather than leaving it implied.
+  if (held.length === 1 && held[0] === "Administrator") {
+    return "Administrator · reviews by default";
+  }
+  return held.join(" · ") || account.role;
+}
 
 export default async function AdminPage() {
   if (!getSupabaseEnv()) redirect("/login");
@@ -114,7 +121,9 @@ export default async function AdminPage() {
           <h2 className="text-xl font-semibold">Reviewer access</h2>
           <p className="text-muted-foreground mt-1 text-sm text-pretty">
             A reviewer is a CFI who can approve quiz cards and practice
-            questions. Nothing reaches a student until one of them does.
+            questions. Nothing reaches a student until one of them does. This is
+            a capability rather than a role, so the same person can also be a
+            pilot mentor later.
           </p>
           <ReviewerAccessForm />
           <p className="text-muted-foreground mt-4 text-xs text-pretty">
@@ -149,7 +158,7 @@ export default async function AdminPage() {
                     ) : null}
                   </span>
                   <span className="text-muted-foreground text-xs">
-                    {ROLE_LABEL[account.role] ?? account.role}
+                    {capabilities(account)}
                   </span>
                 </li>
               ))}

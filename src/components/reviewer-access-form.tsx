@@ -8,11 +8,11 @@ import { grantReviewerAccess } from "@/app/(dashboard)/admin/actions";
 import type { AuthState } from "@/app/(auth)/actions";
 
 function SubmitButton({
-  role,
+  grant,
   label,
   variant,
 }: {
-  role: string;
+  grant: string;
   label: string;
   variant?: "default" | "outline";
 }) {
@@ -21,8 +21,8 @@ function SubmitButton({
   return (
     <Button
       type="submit"
-      name="role"
-      value={role}
+      name="grant"
+      value={grant}
       size="sm"
       variant={variant}
       disabled={pending}
@@ -78,9 +78,9 @@ export function ReviewerAccessForm() {
       ) : null}
 
       <div className="mt-3 flex flex-wrap gap-2">
-        <SubmitButton role="mentor" label="Give reviewer access" />
+        <SubmitButton grant="yes" label="Give reviewer access" />
         <SubmitButton
-          role="student"
+          grant="no"
           label="Remove reviewer access"
           variant="outline"
         />
