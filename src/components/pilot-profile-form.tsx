@@ -241,7 +241,7 @@ export function PilotProfileForm({
           </label>
           <div>
             <Label htmlFor="certificateNumber">
-              Certificate number (optional)
+              Your FAA certificate number (optional)
             </Label>
             <Input
               id="certificateNumber"
@@ -250,7 +250,8 @@ export function PilotProfileForm({
               placeholder="1234567"
             />
             <p className="text-muted-foreground mt-1 text-xs text-pretty">
-              So we can check it against the FAA airman registry ourselves.
+              The number itself, not your name — so we can look it up in the FAA
+              airman registry.
             </p>
           </div>
         </div>

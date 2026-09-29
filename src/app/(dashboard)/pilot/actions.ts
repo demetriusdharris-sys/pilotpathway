@@ -98,6 +98,25 @@ export async function savePilot(
     return { error: "Write your state as two letters, like CA." };
   }
 
+  // The certificate number exists so a person can check it against the FAA
+  // airman registry. A name is not checkable, and a name is what gets typed here
+  // by anyone who has been writing "Jane Doe, CFI 1234567" into the review page
+  // all week. So refuse anything with a space or a comma in it.
+  //
+  // Deliberately loose beyond that: certificate formats vary, and the real
+  // control is a human reading the registry rather than a regular expression.
+  const certificateNumber = trimmed(formData, "certificateNumber");
+
+  if (
+    certificateNumber !== null &&
+    !/^[A-Za-z0-9-]{3,40}$/.test(certificateNumber)
+  ) {
+    return {
+      error:
+        "Just the certificate number — digits and letters, no name and no spaces. It is there so we can look it up.",
+    };
+  }
+
   const firstInFamilyRaw = String(formData.get("firstInFamily") ?? "");
 
   const input: PilotUpsert = {
@@ -134,7 +153,7 @@ export async function savePilot(
     // content_reviewers and entering a classroom is vetting_status, both of
     // which an administrator decides. See 0040.
     isCfi: formData.get("isCfi") === "on",
-    certificateNumber: trimmed(formData, "certificateNumber"),
+    certificateNumber,
   };
 
   try {
