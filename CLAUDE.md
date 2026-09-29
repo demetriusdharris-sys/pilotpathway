@@ -389,7 +389,29 @@ A working pilot speaks to a classroom; the students who are interested sign up f
 - **`0006`'s policy on `organizations` is "you may read one you are a member of"**, which left a volunteering pilot seeing "A school" instead of a name. `0037` fixes it narrowly. Found by reading the policy, not by waiting for it to look broken.
 - **The certificate number field must reject a name.** It exists so a person can look the number up in the FAA airman registry; "Demetrius Harris, Admin" is what gets typed there by anyone who has been writing a reviewer credential all week.
 
-**Still to build:** stage 3, the per-visit code that attributes a student signup to the visit that reached them — the sentence a sponsor renews on is "your funded visit produced 14 signups, 9 of whom finished Stage 1", and nothing in the app can produce it yet. Then the student-facing thread, so a pilot's story stays visible to the students who met them. A photo on a pilot profile is wanted and not built: it needs storage, type and size checks, and a decision about showing a volunteer's face to students.
+### Attribution — migration `0041`
+
+**Confirming a visit mints a six-character code.** The school and the pilot see it on the visit page, with a `/j/<code>` link beside it. `supabase/tests/visit-attribution.sql` proves the lot — 12 checks, all passing Sep 29 2026.
+
+- **A code is never required to sign up.** The core ground school is free to everyone permanently; a code that unlocked it would make the funnel a paywall. The code records where somebody came from, and the page says so.
+- **Attribution is not consent.** Claiming a code does not enrol the student at that school and gives its staff no view of their progress. The test asserts no consent row naming that school, and that visibility is **unchanged before and after** the claim — the before/after form matters, because a global "can this school see this student" check in a database full of test data answers a question about the test data. That is how step 7 first failed while the code was correct.
+- **One attribution per student, first one wins.** Splitting a person between two sponsors invents a number nobody can defend. It cascades with the account, so a deleted student lowers a sponsor count rather than outliving their consent to be counted.
+- **`/j/<code>` is public and reads with the service role**, returning nothing but that pilot's own public story. Somebody who met a pilot forty minutes ago has no account, and making them create one before showing them anything wastes the only moment that matters. It also closes the loop: the pilot a student met stays in front of them while they sign up.
+- **Claimed once, in the auth callback**, where there is a session and it runs exactly once. Best-effort throughout — a bad code must never stop somebody confirming an account.
+- **The alphabet excludes O/0 and I/1**, because a student reads the code off a projector from the back row and types it on a phone.
+
+**Still to build:** — the sentence a sponsor renews on is "your funded visit produced 14 signups, 9 of whom finished Stage 1", and nothing in the app can produce it yet. Then the student-facing thread, so a pilot's story stays visible to the students who met them. A photo on a pilot profile is wanted and not built: it needs storage, type and size checks, and a decision about showing a volunteer's face to students.
+
+---
+
+## Getting a beta in front of people — Sep 29 2026
+
+**A minor is asked for a guardian on the dashboard**, not left to find a setting. The invite had been buried on `/profile` since September, which was survivable while students arrived one at a time; students arriving from a classroom visit are school-age in bulk, so the guardian flow becomes the common path.
+
+- **A prompt, never a gate.** The ground school is free to everyone permanently, and locking a minor out of learning while a parent gets round to an email would fall hardest on exactly the students this exists for. What a guardian unlocks is the things that need their say — sharing progress with a school, and live sessions when those are built — and the copy says so in both states.
+- **One banner at a time.** A student with no date of birth is asked for that first, because the guardian question cannot be asked without it. A failed read shows nothing rather than nagging somebody over our own error.
+
+**The home page now has a door for the other three audiences.** It had been student-only since it was built, which was right when students were the only audience — but a flight instructor who heard about this and visited saw a ground school for teenagers and left. That was a recruiting channel going unused while the review queue waited on exactly those people.
 
 ---
 
