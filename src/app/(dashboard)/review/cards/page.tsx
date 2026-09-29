@@ -54,8 +54,7 @@ export default async function CardReviewPage({
         </h1>
         <p className="text-muted-foreground mt-3 text-sm text-pretty">
           Reviewing quiz cards is for flight instructors and administrators. If
-          you are a CFI and should have access, email
-          demetrius@pilotpathway.ai.
+          you are a CFI and should have access, email demetrius@pilotpathway.ai.
         </p>
         <Link
           href="/dashboard"
@@ -136,12 +135,19 @@ export default async function CardReviewPage({
         </p>
 
         <p className="text-muted-foreground mt-3 text-sm text-pretty">
-          Reviewing practice test questions instead?{" "}
+          Also here:{" "}
           <Link
             href="/review"
             className="text-foreground font-medium underline underline-offset-4"
           >
-            They are on their own page
+            practice test questions
+          </Link>{" "}
+          and{" "}
+          <Link
+            href="/review/diagrams"
+            className="text-foreground font-medium underline underline-offset-4"
+          >
+            lesson diagrams
           </Link>
           .
         </p>

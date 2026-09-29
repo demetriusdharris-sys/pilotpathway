@@ -11,6 +11,8 @@ import { ObjectiveList } from "@/components/objective-list";
 import { MAX_HISTORY_MESSAGES } from "@/lib/tutor";
 import { LessonStatusControls } from "@/components/lesson-status-controls";
 import { QuizCards } from "@/components/quiz-cards";
+import { LessonDiagrams } from "@/components/lesson-diagrams";
+import { loadApprovedDiagrams } from "@/lib/diagrams/load";
 import { tutorStarters } from "@/lib/tutor-starters";
 import { TutorChat } from "@/components/tutor-chat";
 
@@ -71,9 +73,10 @@ export default async function LessonPage({ params }: LessonPageProps) {
   // Prior conversation, so a refresh no longer destroys the thread. The
   // approved cards, what this student has shown, and which objectives can be
   // shown at all load alongside it -- all independent reads.
-  const [history, cards, mastery, assessable] = await Promise.all([
+  const [history, cards, diagrams, mastery, assessable] = await Promise.all([
     loadConversation(supabase, user.id, lesson.slug, MAX_HISTORY_MESSAGES),
     loadApprovedCards(supabase, lesson.slug),
+    loadApprovedDiagrams(supabase, lesson.slug),
     loadMastery(supabase, user.id),
     loadAssessableObjectives(supabase, lesson.slug),
   ]);
@@ -115,6 +118,10 @@ export default async function LessonPage({ params }: LessonPageProps) {
         mastery={mastery}
         assessable={assessable}
       />
+
+      {/* Nothing until a CFI has approved a diagram, for the same reason as
+          a quiz card: a picture asserts facts. */}
+      <LessonDiagrams diagrams={diagrams} />
 
       {/* Renders nothing until a CFI has approved cards for this lesson. */}
       <QuizCards cards={cards} />
