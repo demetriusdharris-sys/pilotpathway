@@ -6,6 +6,11 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isAdmin, setContentReviewer } from "@/lib/admin";
 import { setReportStatus } from "@/lib/content-reports";
 import { setPilotVetting } from "@/lib/pilots";
+import {
+  createOrganization,
+  removeOrganizationMember,
+  setOrganizationMember,
+} from "@/lib/organizations";
 import type { AuthState } from "@/app/(auth)/actions";
 
 /**
@@ -171,6 +176,118 @@ export async function vetPilot(
     console.error("Pilot vetting failed:", {
       actorId: user.id,
       status,
+      error: raised,
+    });
+
+    return { error: raised };
+  }
+}
+
+/**
+ * Creates a school. Administrators only, because staff of a school can
+ * eventually read the progress of students who consent to share with them — so
+ * whether this is a real school is a judgement a person makes, and a school
+ * cannot register itself.
+ */
+export async function addOrganization(
+  _prevState: AuthState,
+  formData: FormData,
+): Promise<AuthState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Please log in again." };
+  }
+
+  const name = String(formData.get("name") ?? "").trim();
+  const orgType = String(formData.get("orgType") ?? "");
+  const adminEmail = String(formData.get("adminEmail") ?? "").trim();
+
+  if (!name) {
+    return { error: "Give the school a name." };
+  }
+
+  const kinds = ["school", "district", "sponsor", "flight_school"];
+
+  if (!kinds.includes(orgType)) {
+    return { error: "Say what kind of organisation it is." };
+  }
+
+  try {
+    const message = await createOrganization(
+      supabase,
+      name,
+      orgType,
+      adminEmail || null,
+    );
+
+    revalidatePath("/admin");
+
+    return { message };
+  } catch (error) {
+    const raised = error instanceof Error ? error.message : String(error);
+
+    console.error("Creating an organisation failed:", {
+      actorId: user.id,
+      error: raised,
+    });
+
+    return { error: raised };
+  }
+}
+
+/**
+ * Adds somebody to a school, changes their role, or removes them.
+ *
+ * Reachable by an administrator or by whoever runs that school — staff cannot
+ * add staff, because that would let anyone with a classroom login widen who
+ * sees student progress.
+ */
+export async function changeOrganizationMember(
+  _prevState: AuthState,
+  formData: FormData,
+): Promise<AuthState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Please log in again." };
+  }
+
+  const organizationId = String(formData.get("organizationId") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim();
+  const orgRole = String(formData.get("orgRole") ?? "");
+  const intent = String(formData.get("intent") ?? "set");
+
+  if (!organizationId || !email) {
+    return { error: "Type their email address." };
+  }
+
+  if (intent === "set" && !["member", "staff", "org_admin"].includes(orgRole)) {
+    return { error: "Pick what they are at the school." };
+  }
+
+  try {
+    const message =
+      intent === "remove"
+        ? await removeOrganizationMember(supabase, organizationId, email)
+        : await setOrganizationMember(supabase, organizationId, email, orgRole);
+
+    revalidatePath("/admin");
+    revalidatePath("/visits");
+
+    return { message };
+  } catch (error) {
+    const raised = error instanceof Error ? error.message : String(error);
+
+    console.error("Changing a membership failed:", {
+      actorId: user.id,
+      intent,
       error: raised,
     });
 

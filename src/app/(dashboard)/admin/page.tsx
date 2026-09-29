@@ -11,6 +11,11 @@ import { countReportsByStatus, loadReports } from "@/lib/content-reports";
 import { loadActivity } from "@/lib/activity";
 import { loadAllPilots } from "@/lib/pilots";
 import { PilotVettingForm } from "@/components/pilot-vetting-form";
+import { loadOrganizations } from "@/lib/organizations";
+import {
+  CreateOrganizationForm,
+  OrganizationMembersForm,
+} from "@/components/organization-forms";
 import { ReportTriage } from "@/components/report-triage";
 import { ReviewerAccessForm } from "@/components/reviewer-access-form";
 import { SignOutButton } from "@/components/sign-out-button";
@@ -78,6 +83,7 @@ export default async function AdminPage() {
     reportCounts,
     activity,
     pilots,
+    organizations,
   ] = await Promise.all([
     loadStaffAccounts(admin),
     getBankHealth(supabase),
@@ -87,6 +93,7 @@ export default async function AdminPage() {
     countReportsByStatus(admin),
     loadActivity(admin),
     loadAllPilots(admin),
+    loadOrganizations(admin),
   ]);
 
   const thin = health.filter((entry) => entry.approved < entry.slots);
@@ -136,6 +143,30 @@ export default async function AdminPage() {
             those stay hand-written statements, where they are visible. Every
             change made here is recorded permanently.
           </p>
+        </section>
+
+        {/* ------------------------------------------------------------ */}
+        <section className="border-border bg-card mt-4 rounded-lg border p-6">
+          <h2 className="text-xl font-semibold">Schools and sponsors</h2>
+          <p className="text-muted-foreground mt-1 text-sm text-pretty">
+            Creating one is yours to do — a school cannot register itself,
+            because its staff can eventually read the progress of students who
+            share with them. Adding teachers is not: name whoever runs the
+            school and they add their own.
+          </p>
+
+          <CreateOrganizationForm />
+
+          {organizations.length > 0 ? (
+            <ul className="mt-6 flex flex-col gap-3">
+              {organizations.map((organization) => (
+                <OrganizationMembersForm
+                  key={organization.id}
+                  organization={organization}
+                />
+              ))}
+            </ul>
+          ) : null}
         </section>
 
         {/* ------------------------------------------------------------ */}
