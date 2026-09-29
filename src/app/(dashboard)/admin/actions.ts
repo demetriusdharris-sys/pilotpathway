@@ -10,6 +10,8 @@ import {
   createOrganization,
   removeOrganizationMember,
   setOrganizationMember,
+  unverifyOrganization,
+  verifyOrganization,
 } from "@/lib/organizations";
 import type { AuthState } from "@/app/(auth)/actions";
 
@@ -286,6 +288,64 @@ export async function changeOrganizationMember(
     const raised = error instanceof Error ? error.message : String(error);
 
     console.error("Changing a membership failed:", {
+      actorId: user.id,
+      intent,
+      error: raised,
+    });
+
+    return { error: raised };
+  }
+}
+
+/**
+ * Confirms a school is real, or withdraws it.
+ *
+ * This is the judgement 0039 moved the gate to. A school can set itself up and
+ * ask for a pilot straight away, because a visit touches no student — but it
+ * cannot enrol a student, and no visit of its can be confirmed, until somebody
+ * has checked it exists.
+ */
+export async function decideOnOrganization(
+  _prevState: AuthState,
+  formData: FormData,
+): Promise<AuthState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Please log in again." };
+  }
+
+  const organizationId = String(formData.get("organizationId") ?? "").trim();
+  const intent = String(formData.get("intent") ?? "");
+  const verifiedBy = String(formData.get("verifiedBy") ?? "").trim();
+  const note = String(formData.get("note") ?? "").trim();
+
+  if (!organizationId || (intent !== "verify" && intent !== "withdraw")) {
+    return { error: "Nothing was recorded." };
+  }
+
+  try {
+    const message =
+      intent === "verify"
+        ? await verifyOrganization(
+            supabase,
+            organizationId,
+            verifiedBy,
+            note || null,
+          )
+        : await unverifyOrganization(supabase, organizationId, note || null);
+
+    revalidatePath("/admin");
+    revalidatePath("/visits");
+
+    return { message };
+  } catch (error) {
+    const raised = error instanceof Error ? error.message : String(error);
+
+    console.error("Deciding on an organisation failed:", {
       actorId: user.id,
       intent,
       error: raised,

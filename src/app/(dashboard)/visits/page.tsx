@@ -11,6 +11,8 @@ import {
   type ClassroomVisit,
 } from "@/lib/visits";
 import { RequestVisitForm } from "@/components/visit-forms";
+import { SetUpSchoolForm } from "@/components/set-up-school-form";
+import { loadOwnOrganizations } from "@/lib/organizations";
 import { SignOutButton } from "@/components/sign-out-button";
 
 export const metadata = {
@@ -73,34 +75,43 @@ export default async function VisitsPage() {
 
   if (!user) redirect("/login?next=/visits");
 
-  const [organizations, pilot, visits] = await Promise.all([
+  const [organizations, pilot, visits, ownOrganizations] = await Promise.all([
     loadStaffOrganizations(supabase, user.id).catch(() => []),
     loadOwnPilotProfile(supabase, user.id).catch(() => null),
     loadVisits(supabase),
+    loadOwnOrganizations(supabase, user.id),
   ]);
+
+  const unconfirmed = ownOrganizations.filter((org) => org.verifiedAt === null);
 
   const isStaff = organizations.length > 0;
   const isVerifiedPilot = pilot?.vettingStatus === "verified";
 
-  // Neither a school nor a cleared pilot: there is nothing here, and saying so
-  // plainly beats an empty page that looks broken.
+  // Not at a school and not a pilot. Rather than a dead end, offer the thing
+  // they are most likely here to do: set their own school up.
   if (!isStaff && !pilot) {
     return (
       <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-16">
         <h1 className="text-2xl font-semibold">
-          Nothing here for this account
+          Bring a pilot to your students
         </h1>
         <p className="text-muted-foreground mt-3 text-sm text-pretty">
-          Classroom visits are for schools asking for a pilot, and for pilots
-          volunteering to go. If you are a teacher and your school is not set up
-          yet, email demetrius@pilotpathway.ai.
+          Set your school up and you can ask for a working pilot straight away.
+          Every pilot who visits has had a background check.
         </p>
-        <Link
-          href="/dashboard"
-          className="mt-6 inline-block font-medium underline underline-offset-4"
-        >
-          Back to the dashboard
-        </Link>
+
+        <SetUpSchoolForm />
+
+        <p className="text-muted-foreground mt-8 text-sm text-pretty">
+          Here as a pilot instead?{" "}
+          <Link
+            href="/pilot"
+            className="text-foreground font-medium underline underline-offset-4"
+          >
+            Make a pilot profile
+          </Link>
+          .
+        </p>
       </main>
     );
   }
@@ -165,6 +176,20 @@ export default async function VisitsPage() {
                 Your profile
               </Link>{" "}
               says where that stands.
+            </p>
+          </section>
+        ) : null}
+
+        {unconfirmed.length > 0 ? (
+          <section className="border-gold/40 bg-gold/10 mt-6 rounded-lg border p-5">
+            <h2 className="font-semibold">
+              {unconfirmed.map((org) => org.name).join(", ")} is waiting to be
+              checked
+            </h2>
+            <p className="mt-2 text-sm text-pretty">
+              You can ask for a pilot now. Before one commits to coming we
+              confirm the school is real, and a student cannot be enrolled until
+              then — it is usually quick.
             </p>
           </section>
         ) : null}

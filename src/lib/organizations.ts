@@ -33,6 +33,10 @@ export type OrganizationSummary = {
   id: string;
   name: string;
   orgType: string;
+  /** Null until somebody has confirmed it is a real school. */
+  verifiedAt: string | null;
+  verifiedBy: string | null;
+  selfRegistered: boolean;
   members: { userId: string; email: string | null; orgRole: string }[];
 };
 
@@ -55,7 +59,11 @@ export async function loadOrganizations(
   admin: SupabaseClient,
 ): Promise<OrganizationSummary[]> {
   const [orgResult, memberResult] = await Promise.all([
-    admin.from("organizations").select("id, name, org_type").order("name"),
+    admin
+      .from("organizations")
+      .select("id, name, org_type, verified_at, verified_by, self_registered")
+      .order("verified_at", { nullsFirst: true })
+      .order("name"),
     admin
       .from("organization_members")
       .select("organization_id, user_id, org_role"),
@@ -133,7 +141,15 @@ export async function loadOrganizations(
         : a.orgRole.localeCompare(b.orgRole),
     );
 
-    organizations.push({ id, name, orgType, members });
+    organizations.push({
+      id,
+      name,
+      orgType,
+      verifiedAt: text(row.verified_at),
+      verifiedBy: text(row.verified_by),
+      selfRegistered: row.self_registered === true,
+      members,
+    });
   }
 
   return organizations;
@@ -194,4 +210,80 @@ export async function removeOrganizationMember(
   }
 
   return typeof data === "string" ? data : "Done.";
+}
+
+/** Confirms a school is real. Administrators only. */
+export async function verifyOrganization(
+  supabase: SupabaseClient,
+  organizationId: string,
+  verifiedBy: string,
+  note: string | null,
+): Promise<string> {
+  const { data, error } = await supabase.rpc("verify_organization", {
+    p_organization_id: organizationId,
+    p_verified_by: verifiedBy,
+    p_note: note,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return typeof data === "string" ? data : "Done.";
+}
+
+/**
+ * Withdraws a school.
+ *
+ * Deliberately removes nobody and cancels nothing: it stops the school enrolling
+ * students and stops new visits being confirmed. Unpicking what already happened
+ * is a decision a person should make case by case.
+ */
+export async function unverifyOrganization(
+  supabase: SupabaseClient,
+  organizationId: string,
+  note: string | null,
+): Promise<string> {
+  const { data, error } = await supabase.rpc("unverify_organization", {
+    p_organization_id: organizationId,
+    p_note: note,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return typeof data === "string" ? data : "Done.";
+}
+
+/** Whether the caller runs any organisation — they can then set one up or use it. */
+export async function loadOwnOrganizations(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<{ id: string; name: string; verifiedAt: string | null }[]> {
+  const { data, error } = await supabase
+    .from("organization_members")
+    .select("organization_id, org_role, organizations(name, verified_at)")
+    .eq("user_id", userId)
+    .in("org_role", ["staff", "org_admin"]);
+
+  if (error) {
+    console.error("Could not read your organisations:", {
+      error: error.message,
+    });
+    return [];
+  }
+
+  const list: { id: string; name: string; verifiedAt: string | null }[] = [];
+
+  for (const row of (data ?? []) as Row[]) {
+    const id = text(row.organization_id);
+    const nested = row.organizations as Row | null;
+    const name = text(nested?.name);
+    if (id && name) {
+      list.push({ id, name, verifiedAt: text(nested?.verified_at) });
+    }
+  }
+
+  return list;
 }

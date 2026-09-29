@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import {
   addOrganization,
   changeOrganizationMember,
+  decideOnOrganization,
 } from "@/app/(dashboard)/admin/actions";
 import {
   ORG_ROLE_LABEL,
@@ -146,13 +147,31 @@ export function OrganizationMembersForm({
     <li className="border-border rounded-md border p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <span className="font-medium">{organization.name}</span>
-        <span className="text-muted-foreground text-xs">
+        <span
+          className={`text-xs ${
+            organization.verifiedAt
+              ? "text-muted-foreground"
+              : "text-gold-strong font-semibold"
+          }`}
+        >
+          {organization.verifiedAt ? "Confirmed" : "Not confirmed yet"}
+          {" · "}
           {ORG_TYPE_LABEL[organization.orgType] ?? organization.orgType}
           {students.length > 0
             ? ` · ${students.length} enrolled student${students.length === 1 ? "" : "s"}`
             : ""}
         </span>
       </div>
+
+      {organization.verifiedAt ? null : (
+        <p className="border-gold/40 bg-gold/10 mt-2 rounded-md border p-3 text-xs text-pretty">
+          {organization.selfRegistered
+            ? "Somebody set this up themselves. Until it is confirmed it can ask for a classroom visit, but it cannot enrol a student and no visit of its can be confirmed."
+            : "Not confirmed. It cannot enrol a student and no visit of its can be confirmed."}
+        </p>
+      )}
+
+      <VerifyOrganizationForm organization={organization} />
 
       {staff.length === 0 ? (
         <p className="text-muted-foreground mt-2 text-sm text-pretty">
@@ -212,5 +231,58 @@ export function OrganizationMembersForm({
         </p>
       </form>
     </li>
+  );
+}
+
+/** Confirm a school is real, or withdraw it. */
+function VerifyOrganizationForm({
+  organization,
+}: {
+  organization: OrganizationSummary;
+}) {
+  const [state, formAction] = useActionState<AuthState, FormData>(
+    decideOnOrganization,
+    {},
+  );
+
+  return (
+    <form action={formAction} className="mt-3">
+      <input type="hidden" name="organizationId" value={organization.id} />
+
+      {organization.verifiedAt ? (
+        <p className="text-muted-foreground text-xs">
+          Confirmed by {organization.verifiedBy ?? "somebody"} on{" "}
+          {organization.verifiedAt.slice(0, 10)}.
+        </p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          <input
+            name="verifiedBy"
+            placeholder="Who checked it"
+            className="border-input bg-background focus-visible:ring-ring min-w-0 flex-1 rounded-md border px-2 py-1.5 text-xs focus-visible:ring-2 focus-visible:outline-none"
+          />
+          <input
+            name="note"
+            placeholder="How (optional)"
+            className="border-input bg-background focus-visible:ring-ring min-w-0 flex-1 rounded-md border px-2 py-1.5 text-xs focus-visible:ring-2 focus-visible:outline-none"
+          />
+        </div>
+      )}
+
+      <Feedback state={state} />
+
+      <div className="mt-2 flex flex-wrap gap-2">
+        {organization.verifiedAt ? (
+          <Submit
+            label="Withdraw"
+            name="intent"
+            value="withdraw"
+            variant="outline"
+          />
+        ) : (
+          <Submit label="Confirm it is real" name="intent" value="verify" />
+        )}
+      </div>
+    </form>
   );
 }
