@@ -40,6 +40,17 @@ const field =
  * the checkbox simply looked unticked, which is indistinguishable from a pilot
  * who never ticked it. Do not convert these back to defaultValue/defaultChecked.
  *
+ * FIRST RUN IS A WIZARD; EDITING IS THE WHOLE PAGE. A pilot creating a profile
+ * sees one topic at a time with "Step 2 of 4 · about 3 minutes", which is what
+ * makes the pitch demo feel lighter than a single long form. A pilot coming back
+ * to change something sees everything at once, because hunting for a field
+ * through four steps is worse than scrolling.
+ *
+ * Every step stays mounted and is hidden with the `hidden` attribute rather than
+ * unmounted. That keeps all the fields in the form so one submit sends the lot,
+ * keeps the controlled state intact, and takes hidden steps out of the
+ * accessibility tree, which is what a screen reader should hear.
+ *
  * Ordered deliberately: the story comes before the logistics. A pilot filling
  * this in should understand from the shape of the page that what a student needs
  * is who they are and how they got there, not their type ratings.
@@ -60,6 +71,12 @@ export function PilotProfileForm({
     savePilot,
     {},
   );
+
+  // A pilot with no profile yet is walked through it. One coming back to edit
+  // sees the whole page, because hunting through four steps for one field is
+  // worse than scrolling past three sections.
+  const stepped = profile === null;
+  const [step, setStep] = useState(0);
 
   const [displayName, setDisplayName] = useState(profile?.displayName ?? "");
   const [jobTitle, setJobTitle] = useState(profile?.jobTitle ?? "");
@@ -95,6 +112,27 @@ export function PilotProfileForm({
     profile?.willDoVirtual ?? true,
   );
 
+  const STEPS = [
+    {
+      title: "How a class meets you",
+      subtitle: "Students remember a person, not a résumé.",
+    },
+    { title: "Your story", subtitle: "The part that actually changes a room." },
+    {
+      title: "Where you belong",
+      subtitle: "What a student might recognise themselves in.",
+    },
+    {
+      title: "Which classrooms you can reach",
+      subtitle: "So we only send you somewhere you can get to.",
+    },
+  ];
+
+  // The only two fields the database insists on. Checked here so Continue does
+  // not walk somebody to step four and then fail on step one.
+  const firstStepReady =
+    displayName.trim().length >= 2 && jobTitle.trim().length >= 2;
+
   function toggleAffiliation(slug: string) {
     setChosen((current) =>
       current.includes(slug)
@@ -105,8 +143,35 @@ export function PilotProfileForm({
 
   return (
     <form action={formAction} className="mt-6 flex flex-col gap-8">
-      <section>
-        <h2 className="text-lg font-semibold">How a class meets you</h2>
+      {stepped ? (
+        <div>
+          <p className="text-muted-foreground text-xs font-semibold tracking-[0.12em] uppercase">
+            Step {step + 1} of {STEPS.length} · about 3 minutes
+          </p>
+          <div
+            className="bg-muted mt-2 h-1 w-full overflow-hidden rounded-full"
+            role="progressbar"
+            aria-valuenow={step + 1}
+            aria-valuemin={1}
+            aria-valuemax={STEPS.length}
+            aria-label="How far through setting up your profile"
+          >
+            <div
+              className="bg-gold-strong h-full transition-all"
+              style={{ width: `${((step + 1) / STEPS.length) * 100}%` }}
+            />
+          </div>
+          <h2 className="mt-4 text-lg font-semibold">{STEPS[step].title}</h2>
+          <p className="text-muted-foreground mt-1 text-sm text-pretty">
+            {STEPS[step].subtitle}
+          </p>
+        </div>
+      ) : null}
+
+      <section hidden={stepped && step !== 0}>
+        <h2 className="text-lg font-semibold" hidden={stepped}>
+          How a class meets you
+        </h2>
         <p className="text-muted-foreground mt-1 text-sm text-pretty">
           Students remember a person, not a résumé.
         </p>
@@ -163,8 +228,10 @@ export function PilotProfileForm({
         </div>
       </section>
 
-      <section>
-        <h2 className="text-lg font-semibold">Your story</h2>
+      <section hidden={stepped && step !== 1}>
+        <h2 className="text-lg font-semibold" hidden={stepped}>
+          Your story
+        </h2>
         <p className="text-muted-foreground mt-1 text-sm text-pretty">
           Written for a sixteen-year-old who has never been inside an airport
           and is quietly wondering whether people like them do this.
@@ -235,8 +302,10 @@ export function PilotProfileForm({
         </div>
       </section>
 
-      <section>
-        <h2 className="text-lg font-semibold">Where you belong</h2>
+      <section hidden={stepped && step !== 2}>
+        <h2 className="text-lg font-semibold" hidden={stepped}>
+          Where you belong
+        </h2>
         <p className="text-muted-foreground mt-1 text-sm text-pretty">
           Shown to students as &ldquo;a member of …&rdquo;. Tick any that are
           yours — for a student who has never seen a pilot who looks like them,
@@ -327,8 +396,8 @@ export function PilotProfileForm({
         </div>
       </section>
 
-      <section>
-        <h2 className="text-lg font-semibold">
+      <section hidden={stepped && step !== 3}>
+        <h2 className="text-lg font-semibold" hidden={stepped}>
           Which classrooms you can reach
         </h2>
 
@@ -412,9 +481,42 @@ export function PilotProfileForm({
         </p>
       ) : null}
 
-      <div>
-        <SaveButton isNew={profile === null} />
-      </div>
+      {stepped ? (
+        <div className="flex flex-wrap items-center gap-3">
+          {step > 0 ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setStep((current) => current - 1)}
+            >
+              Back
+            </Button>
+          ) : null}
+
+          {step < STEPS.length - 1 ? (
+            <>
+              <Button
+                type="button"
+                onClick={() => setStep((current) => current + 1)}
+                disabled={step === 0 && !firstStepReady}
+              >
+                Continue
+              </Button>
+              {step === 0 && !firstStepReady ? (
+                <span className="text-muted-foreground text-xs text-pretty">
+                  Your name and what you fly, and you can carry on.
+                </span>
+              ) : null}
+            </>
+          ) : (
+            <SaveButton isNew />
+          )}
+        </div>
+      ) : (
+        <div>
+          <SaveButton isNew={false} />
+        </div>
+      )}
     </form>
   );
 }

@@ -99,7 +99,10 @@ export default async function VisitsPage() {
   if (!isStaff && !pilot) {
     return (
       <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-16">
-        <h1 className="text-2xl font-semibold">
+        <span className="text-gold-strong text-xs font-semibold tracking-[0.15em] uppercase">
+          School setup · about a minute
+        </span>
+        <h1 className="mt-1 text-2xl font-semibold">
           Bring a pilot to your students
         </h1>
         <p className="text-muted-foreground mt-3 text-sm text-pretty">
