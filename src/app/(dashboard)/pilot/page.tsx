@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getSupabaseEnv } from "@/lib/supabase/env";
 import { loadAffiliations, loadOwnPilotProfile } from "@/lib/pilots";
+import { isAdmin } from "@/lib/admin";
 import { loadPilotImpact } from "@/lib/visits";
 import { ImpactPanel } from "@/components/impact-record";
 import { PilotProfileForm } from "@/components/pilot-profile-form";
@@ -41,10 +42,11 @@ export default async function PilotPage() {
 
   if (!user) redirect("/login?next=/pilot");
 
-  const [profile, affiliations, impact] = await Promise.all([
+  const [profile, affiliations, impact, canAdminister] = await Promise.all([
     loadOwnPilotProfile(supabase, user.id),
     loadAffiliations(supabase),
     loadPilotImpact(supabase, user.id).catch(() => null),
+    isAdmin(supabase),
   ]);
 
   const status = STATUS_COPY[profile?.vettingStatus ?? "unverified"];
@@ -69,6 +71,14 @@ export default async function PilotPage() {
             >
               Classroom visits
             </Link>
+            {canAdminister ? (
+              <Link
+                href="/admin"
+                className="text-muted-foreground hover:text-foreground text-sm font-medium underline-offset-4 hover:underline"
+              >
+                Admin
+              </Link>
+            ) : null}
             <SignOutButton />
           </div>
         </div>

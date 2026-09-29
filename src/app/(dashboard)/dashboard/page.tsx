@@ -85,9 +85,14 @@ export default async function DashboardPage() {
   }
 
   // A pilot mentor who is not also studying has no business on a page of Stage 1
-  // lessons. Conditional on having no progress, so anyone who is genuinely doing
-  // both keeps their dashboard rather than losing it to a pilot profile.
-  if (isPilot && progress.size === 0) {
+  // lessons. Conditional on having no progress, so anyone genuinely doing both
+  // keeps their dashboard rather than losing it to a pilot profile.
+  //
+  // Never an administrator. /pilot carries no link to /admin, so bouncing an
+  // admin who happens to have a pilot profile would lock them out of their own
+  // admin page — which is exactly the account most likely to have one, since
+  // testing the feature means making one.
+  if (isPilot && !canAdminister && progress.size === 0) {
     redirect("/pilot");
   }
 
