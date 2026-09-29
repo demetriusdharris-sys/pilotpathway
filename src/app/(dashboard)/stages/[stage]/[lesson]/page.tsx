@@ -95,11 +95,31 @@ export default async function LessonPage({ params }: LessonPageProps) {
       </h1>
       <p className="text-muted-foreground mt-3 text-pretty">{lesson.summary}</p>
 
+      {/* THE CONVERSATION IS THE LESSON, so it comes first.
+          There is no lesson body in this product — the tutor teaches it — and
+          it used to sit below the objectives, a reference box and a
+          disclaimer. A student scrolled past the furniture to reach the only
+          thing that teaches them, which is the wrong way round on a phone. */}
+      <TutorChat
+        stageSlug={stage.slug}
+        lessonSlug={lesson.slug}
+        initialMessages={history.map((m) => ({
+          role: m.role,
+          content: m.content,
+        }))}
+        starters={tutorStarters(lesson)}
+      />
+
       <ObjectiveList
         objectives={lesson.objectives}
         mastery={mastery}
         assessable={assessable}
       />
+
+      {/* Renders nothing until a CFI has approved cards for this lesson. */}
+      <QuizCards cards={cards} />
+
+      <LessonStatusControls lessonSlug={lesson.slug} status={status} />
 
       <section className="border-border bg-muted/40 mt-10 rounded-lg border p-5">
         <h2 className="text-sm font-semibold tracking-[0.15em] uppercase">
@@ -119,21 +139,6 @@ export default async function LessonPage({ params }: LessonPageProps) {
           and handbook content change.
         </p>
       </section>
-
-      {/* Renders nothing until a CFI has approved cards for this lesson. */}
-      <QuizCards cards={cards} />
-
-      <LessonStatusControls lessonSlug={lesson.slug} status={status} />
-
-      <TutorChat
-        stageSlug={stage.slug}
-        lessonSlug={lesson.slug}
-        initialMessages={history.map((m) => ({
-          role: m.role,
-          content: m.content,
-        }))}
-        starters={tutorStarters(lesson)}
-      />
     </main>
   );
 }

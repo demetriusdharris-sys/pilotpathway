@@ -118,15 +118,29 @@ export function TutorChat({
       </p>
 
       {messages.length === 0 ? (
-        <div className="mt-5 flex flex-wrap gap-2">
-          {starters.map((starter) => (
+        <div className="mt-5 flex flex-col gap-2">
+          {starters.map((starter, index) => (
             <button
               key={starter}
               type="button"
               onClick={() => send(starter)}
-              className="border-border hover:bg-accent rounded-full border px-3 py-1.5 text-left text-sm transition-colors"
+              className={`group flex items-start gap-3 rounded-lg border p-4 text-left transition-colors ${
+                index === 0
+                  ? "border-gold-strong bg-gold/10 hover:bg-gold/15"
+                  : "border-border hover:bg-accent"
+              }`}
             >
-              {starter}
+              <span
+                aria-hidden
+                className={`mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
+                  index === 0
+                    ? "bg-gold text-gold-foreground"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                {index + 1}
+              </span>
+              <span className="text-sm text-pretty">{starter}</span>
             </button>
           ))}
         </div>
