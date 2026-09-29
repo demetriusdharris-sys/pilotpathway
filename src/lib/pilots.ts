@@ -293,3 +293,67 @@ export async function setPilotVetting(
 
   return typeof data === "string" ? data : "Done.";
 }
+
+/**
+ * Flight instructors who have signed up, and whether they can review yet.
+ *
+ * The point of this read: a CFI who ticks "I am a flight instructor" is exactly
+ * the person the content review queue has been waiting for, and without somewhere
+ * to see them they are a row in a table nobody opens. It turns finding a reviewer
+ * from a search into a list.
+ *
+ * `is_cfi` and the certificate number are self-declared and verified by nobody
+ * here — the number is recorded so a person can check it against the FAA airman
+ * registry, which is a judgement no query should pretend to make.
+ */
+export async function loadCfiCandidates(
+  admin: SupabaseClient,
+): Promise<
+  { profile: PilotProfile; email: string | null; mayReview: boolean }[]
+> {
+  const { data, error } = await admin
+    .from("pilot_profiles")
+    .select(COLUMNS)
+    .eq("is_cfi", true)
+    .order("created_at");
+
+  if (error) {
+    throw new Error(`flight instructors: ${error.message}`);
+  }
+
+  const profiles = ((data ?? []) as Row[])
+    .map(toProfile)
+    .filter((entry): entry is PilotProfile => entry !== null);
+
+  if (profiles.length === 0) return [];
+
+  const ids = profiles.map((entry) => entry.userId);
+
+  const [emailResult, reviewerResult] = await Promise.all([
+    admin.from("profiles").select("id, email").in("id", ids),
+    admin
+      .from("content_reviewers")
+      .select("user_id")
+      .in("user_id", ids)
+      .is("revoked_at", null),
+  ]);
+
+  const emailById = new Map<string, string>();
+  for (const row of (emailResult.data ?? []) as Row[]) {
+    const id = text(row.id);
+    const email = text(row.email);
+    if (id && email) emailById.set(id, email);
+  }
+
+  const reviewers = new Set<string>();
+  for (const row of (reviewerResult.data ?? []) as Row[]) {
+    const id = text(row.user_id);
+    if (id) reviewers.add(id);
+  }
+
+  return profiles.map((profile) => ({
+    profile,
+    email: emailById.get(profile.userId) ?? null,
+    mayReview: reviewers.has(profile.userId),
+  }));
+}

@@ -9,7 +9,8 @@ import { loadReviewCounts } from "@/lib/practice/review";
 import { loadCardReviewCounts } from "@/lib/card-review";
 import { countReportsByStatus, loadReports } from "@/lib/content-reports";
 import { loadActivity } from "@/lib/activity";
-import { loadAllPilots } from "@/lib/pilots";
+import { loadAllPilots, loadCfiCandidates } from "@/lib/pilots";
+import { CfiCard } from "@/components/cfi-panel";
 import { PilotVettingForm } from "@/components/pilot-vetting-form";
 import { loadOrganizations } from "@/lib/organizations";
 import {
@@ -84,6 +85,7 @@ export default async function AdminPage() {
     activity,
     pilots,
     organizations,
+    cfis,
   ] = await Promise.all([
     loadStaffAccounts(admin),
     getBankHealth(supabase),
@@ -94,6 +96,7 @@ export default async function AdminPage() {
     loadActivity(admin),
     loadAllPilots(admin),
     loadOrganizations(admin),
+    loadCfiCandidates(admin),
   ]);
 
   const thin = health.filter((entry) => entry.approved < entry.slots);
@@ -409,6 +412,50 @@ export default async function AdminPage() {
               </Link>
             </div>
           </div>
+        </section>
+
+        {/* ------------------------------------------------------------ */}
+        {/* Directly under the queues, because this is the answer to them: the
+            queues are waiting on a CFI, and these are the CFIs. */}
+        <section className="border-border bg-card mt-4 rounded-lg border p-6">
+          <h2 className="text-xl font-semibold">Flight instructors</h2>
+          <p className="text-muted-foreground mt-1 text-sm text-pretty">
+            Pilots who said they hold an instructor certificate when they signed
+            up. Nothing reaches a student until one of them approves it, so this
+            list is the answer to the two queues above.
+          </p>
+
+          {cfis.length === 0 ? (
+            <p className="text-muted-foreground mt-3 text-sm text-pretty">
+              None yet. Point a CFI at{" "}
+              <code>pilotpathway.vercel.app/signup</code> and they can tick
+              &ldquo;I am a flight instructor&rdquo; — or send them{" "}
+              <code>docs/reviewer-invitation.md</code>, which explains the job.
+            </p>
+          ) : (
+            <>
+              <p className="text-muted-foreground mt-2 text-sm tabular-nums">
+                {cfis.filter((entry) => entry.mayReview).length} of{" "}
+                {cfis.length} can review content.
+              </p>
+              <ul className="mt-4 flex flex-col gap-3">
+                {cfis.map((entry) => (
+                  <CfiCard
+                    key={entry.profile.userId}
+                    profile={entry.profile}
+                    email={entry.email}
+                    mayReview={entry.mayReview}
+                  />
+                ))}
+              </ul>
+            </>
+          )}
+
+          <p className="text-muted-foreground mt-4 text-xs text-pretty">
+            Saying so grants nothing on its own — reviewing content is a
+            capability you give here, and entering a classroom is a background
+            check recorded below. A claim only puts somebody in front of you.
+          </p>
         </section>
 
         {/* ------------------------------------------------------------ */}
