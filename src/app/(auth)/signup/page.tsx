@@ -82,14 +82,14 @@ function isKind(value: string | undefined): value is Kind {
 export default async function SignUpPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; as?: string }>;
+  searchParams: Promise<{ next?: string; as?: string; visit?: string }>;
 }) {
-  const { next, as } = await searchParams;
+  const { next, as, visit } = await searchParams;
 
   // Somebody following a link had a reason for coming — a guardian accepting an
   // invite, above all — so they go straight to the ordinary form. Those invite
   // emails are already in the world and must keep working.
-  const kind: Kind | null = isKind(as) ? as : next ? "student" : null;
+  const kind: Kind | null = isKind(as) ? as : next || visit ? "student" : null;
 
   if (kind === null) {
     return (
@@ -184,6 +184,7 @@ export default async function SignUpPage({
         maxDateOfBirth={copy.askDateOfBirth ? maxDateOfBirth() : undefined}
         next={next}
         signupAs={kind}
+        visitCode={visit}
       />
 
       {/* Only shown when they chose, not when they arrived by invite link — in

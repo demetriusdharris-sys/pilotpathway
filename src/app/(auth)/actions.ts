@@ -133,6 +133,11 @@ export async function signUp(
   //
   // An explicit destination always wins. Guardian invite emails already in the
   // world carry `/signup?next=...`, and that link has to keep working.
+  const visitCode = String(formData.get("visitCode") ?? "")
+    .trim()
+    .toUpperCase()
+    .slice(0, 6);
+
   const requested = String(formData.get("next") ?? "");
   const wasSentSomewhere =
     requested.startsWith("/") && !requested.startsWith("//");
@@ -152,6 +157,10 @@ export async function signUp(
         ...(signupAs === "student" ? { date_of_birth: dateOfBirth } : {}),
         ...(firstName ? { first_name: firstName } : {}),
         signup_as: signupAs,
+        // The classroom visit that reached them, if they came from one. Carried
+        // rather than claimed here because there is no session yet — the
+        // confirmation callback does the claiming, once.
+        ...(visitCode ? { signup_visit_code: visitCode } : {}),
       },
     },
   });

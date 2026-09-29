@@ -3,6 +3,7 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { getSupabaseEnv } from "@/lib/supabase/env";
 import { safeNext } from "@/lib/safe-next";
+import { claimVisitCode } from "@/lib/visits";
 
 const OTP_TYPES: readonly EmailOtpType[] = [
   "signup",
@@ -15,6 +16,36 @@ const OTP_TYPES: readonly EmailOtpType[] = [
 
 function isEmailOtpType(value: string | null): value is EmailOtpType {
   return value !== null && OTP_TYPES.includes(value as EmailOtpType);
+}
+
+/**
+ * Records which classroom visit brought this student, once, right after their
+ * account is confirmed.
+ *
+ * Here rather than on the dashboard because this runs exactly once and there is
+ * a session by the time it does. Best-effort throughout: a bad code, a cancelled
+ * visit or an unreachable table must never stop somebody confirming their
+ * account. The worst case is a sponsor count one lower than the truth, which is
+ * a great deal better than a student locked out over an attribution.
+ */
+async function claimVisitIfAny(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+): Promise<void> {
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    const code = user?.user_metadata?.signup_visit_code;
+
+    if (typeof code !== "string" || code.length === 0) return;
+
+    await claimVisitCode(supabase, code);
+  } catch (error) {
+    console.error("Could not attribute a signup to a visit:", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 }
 
 export async function GET(request: NextRequest) {
@@ -39,7 +70,9 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get("code");
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
-    return error ? fail("auth_failed") : NextResponse.redirect(`${origin}${next}`);
+    if (error) return fail("auth_failed");
+    await claimVisitIfAny(supabase);
+    return NextResponse.redirect(`${origin}${next}`);
   }
 
   const tokenHash = searchParams.get("token_hash");
@@ -49,7 +82,9 @@ export async function GET(request: NextRequest) {
       type,
       token_hash: tokenHash,
     });
-    return error ? fail("auth_failed") : NextResponse.redirect(`${origin}${next}`);
+    if (error) return fail("auth_failed");
+    await claimVisitIfAny(supabase);
+    return NextResponse.redirect(`${origin}${next}`);
   }
 
   return fail("missing_code");

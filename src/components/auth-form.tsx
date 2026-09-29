@@ -30,6 +30,12 @@ type AuthFormProps = {
    * grants nothing; see 0040.
    */
   signupAs?: string;
+  /**
+   * Signup only. The code from a classroom visit, carried into the account's
+   * metadata so the confirmation callback can attribute the signup. Never
+   * required — the ground school is free with or without one.
+   */
+  visitCode?: string;
 };
 
 function SubmitButton({
@@ -78,6 +84,7 @@ export function AuthForm({
   askDateOfBirth,
   maxDateOfBirth,
   signupAs,
+  visitCode,
 }: AuthFormProps) {
   const [state, formAction] = useActionState<AuthState, FormData>(action, {});
 
@@ -110,6 +117,9 @@ export function AuthForm({
       {next ? <input type="hidden" name="next" value={next} /> : null}
       {signupAs ? (
         <input type="hidden" name="signupAs" value={signupAs} />
+      ) : null}
+      {visitCode ? (
+        <input type="hidden" name="visitCode" value={visitCode} />
       ) : null}
 
       {askFirstName ? (

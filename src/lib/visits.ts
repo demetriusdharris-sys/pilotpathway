@@ -53,6 +53,8 @@ export type ClassroomVisit = {
   studentsAttended: number | null;
   durationMinutes: number | null;
   cancelledReason: string | null;
+  /** What the pilot puts on a slide. Null until the visit is confirmed. */
+  code: string | null;
   volunteerCount: number;
 };
 
@@ -77,7 +79,7 @@ function int(value: unknown): number | null {
 }
 
 const COLUMNS =
-  "id, organization_id, requested_by, grade_level, subject, expected_students, format, city, state, window_start, window_end, confirmed_for, notes, status, pilot_user_id, students_attended, duration_minutes, cancelled_reason";
+  "id, organization_id, requested_by, grade_level, subject, expected_students, format, city, state, window_start, window_end, confirmed_for, notes, status, pilot_user_id, students_attended, duration_minutes, cancelled_reason, code";
 
 /**
  * Turns rows into visits, filling in the school name, the confirmed pilot's name
@@ -196,6 +198,7 @@ async function decorate(
       studentsAttended: int(row.students_attended),
       durationMinutes: int(row.duration_minutes),
       cancelledReason: text(row.cancelled_reason),
+      code: text(row.code),
       volunteerCount: offers.get(id) ?? 0,
     });
   }
@@ -532,4 +535,122 @@ export async function loadSchoolImpact(
   }
 
   return summarise((data ?? []) as Row[], "pilot_user_id");
+}
+
+// --- Attribution: which visit reached which student -------------------------
+
+/**
+ * What a student sees when they type the code from the board.
+ *
+ * Read with the SERVICE ROLE, because the page is public — somebody who just
+ * met a pilot has no account yet, and `pilot_profiles` is readable only to
+ * signed-in users. Only the pilot's public story is returned: no email, no
+ * vetting detail, no school contact, nothing about any other student.
+ */
+export type VisitInvitation = {
+  code: string;
+  organizationName: string | null;
+  pilotName: string | null;
+  pilotJobTitle: string | null;
+  pilotEmployer: string | null;
+  pilotStory: string | null;
+  pilotGrewUpIn: string | null;
+  pilotWishIHadKnown: string | null;
+  pilotAffiliations: string[];
+};
+
+export async function loadVisitByCode(
+  admin: SupabaseClient,
+  code: string,
+): Promise<VisitInvitation | null> {
+  const tidy = code.trim().toUpperCase();
+
+  if (!/^[A-HJ-NP-Z2-9]{6}$/.test(tidy)) return null;
+
+  const { data, error } = await admin
+    .from("classroom_visits")
+    .select("code, status, organization_id, pilot_user_id")
+    .eq("code", tidy)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  const row = data as Row;
+  const status = text(row.status);
+
+  // A code for a visit that was cancelled, or never confirmed, invites nobody.
+  if (status !== "confirmed" && status !== "completed") return null;
+
+  const organizationId = text(row.organization_id);
+  const pilotUserId = text(row.pilot_user_id);
+
+  const [orgResult, pilotResult] = await Promise.all([
+    organizationId
+      ? admin
+          .from("organizations")
+          .select("name")
+          .eq("id", organizationId)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    pilotUserId
+      ? admin
+          .from("pilot_profiles")
+          .select(
+            "display_name, job_title, employer, story, grew_up_in, wish_i_had_known, affiliations",
+          )
+          .eq("user_id", pilotUserId)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+
+  const pilot = (pilotResult.data ?? null) as Row | null;
+
+  return {
+    code: tidy,
+    organizationName: text((orgResult.data as Row | null)?.name),
+    pilotName: text(pilot?.display_name),
+    pilotJobTitle: text(pilot?.job_title),
+    pilotEmployer: text(pilot?.employer),
+    pilotStory: text(pilot?.story),
+    pilotGrewUpIn: text(pilot?.grew_up_in),
+    pilotWishIHadKnown: text(pilot?.wish_i_had_known),
+    pilotAffiliations: Array.isArray(pilot?.affiliations)
+      ? (pilot.affiliations as unknown[]).filter(
+          (entry): entry is string => typeof entry === "string",
+        )
+      : [],
+  };
+}
+
+/** A student says which visit reached them. Their own client — it records them. */
+export const claimVisitCode = (supabase: SupabaseClient, code: string) =>
+  call(supabase, "claim_visit_code", { p_code: code });
+
+/** How many students each visit has brought in. */
+export async function loadSignupCounts(
+  supabase: SupabaseClient,
+  visitIds: string[],
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+
+  if (visitIds.length === 0) return counts;
+
+  const { data, error } = await supabase
+    .from("visit_signups")
+    .select("visit_id")
+    .in("visit_id", visitIds);
+
+  if (error) {
+    // Context, not correctness. A failed read shows no number rather than
+    // hiding the visit it belongs to.
+    console.error("Could not read signup counts:", { error: error.message });
+    return counts;
+  }
+
+  for (const row of (data ?? []) as Row[]) {
+    const id = text(row.visit_id);
+    if (id) counts.set(id, (counts.get(id) ?? 0) + 1);
+  }
+
+  return counts;
 }

@@ -9,6 +9,7 @@ import {
   STATUS_LABEL,
   hasOffered,
   loadOffers,
+  loadSignupCounts,
   loadVisit,
 } from "@/lib/visits";
 import {
@@ -45,11 +46,14 @@ export default async function VisitPage({
   // yours" are the same answer — which is also the answer that reveals least.
   if (!visit) notFound();
 
-  const [organizations, pilot, offers] = await Promise.all([
+  const [organizations, pilot, offers, signupCounts] = await Promise.all([
     loadStaffOrganizations(supabase, user.id).catch(() => []),
     loadOwnPilotProfile(supabase, user.id).catch(() => null),
     loadOffers(supabase, visitId).catch(() => []),
+    loadSignupCounts(supabase, [visitId]),
   ]);
+
+  const signups = signupCounts.get(visitId) ?? 0;
 
   const isStaffHere = organizations.some(
     (org) => org.organizationId === visit.organizationId,
@@ -144,6 +148,36 @@ export default async function VisitPage({
             </div>
           ) : null}
         </dl>
+
+        {/* The code, for whoever is standing in front of the class. Shown to the
+            school and the pilot only — it is not secret, but it belongs to the
+            people running the visit. */}
+        {visit.code && (isStaffHere || isTheirVisit) ? (
+          <section className="border-gold/40 bg-gold/10 mt-6 rounded-lg border p-5">
+            <h2 className="font-semibold">Put this on the last slide</h2>
+            <p className="mt-2 font-mono text-3xl font-semibold tracking-[0.2em]">
+              {visit.code}
+            </p>
+            <p className="text-muted-foreground mt-2 text-sm text-pretty">
+              Or send them to{" "}
+              <span className="text-foreground font-medium">
+                pilotpathway.vercel.app/j/{visit.code}
+              </span>
+              , where they will see who visited them before they sign up.
+            </p>
+            <p className="text-muted-foreground mt-2 text-xs text-pretty">
+              It records which visit reached a student. It is not a key — the
+              ground school is free with or without it, and typing it gives this
+              school no view of their progress.
+            </p>
+            {signups > 0 ? (
+              <p className="mt-3 text-sm font-medium">
+                {signups} student{signups === 1 ? " has" : "s have"} signed up
+                from this visit.
+              </p>
+            ) : null}
+          </section>
+        ) : null}
 
         {visit.notes ? (
           <p className="border-border mt-6 border-l-2 pl-4 text-sm text-pretty">
