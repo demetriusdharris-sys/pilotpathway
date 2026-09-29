@@ -56,15 +56,10 @@ export default async function PilotPage() {
           >
             PilotPathway.ai
           </Link>
-          <div className="flex items-center gap-4">
-            <Link
-              href="/dashboard"
-              className="text-muted-foreground hover:text-foreground text-sm font-medium underline-offset-4 hover:underline"
-            >
-              Dashboard
-            </Link>
-            <SignOutButton />
-          </div>
+          {/* No link to the student dashboard. A pilot is not taking the
+              ground school, and offering them a page of Stage 1 lessons
+              suggests they should be. */}
+          <SignOutButton />
         </div>
       </header>
 

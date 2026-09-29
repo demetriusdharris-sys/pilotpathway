@@ -155,7 +155,44 @@ export async function logIn(
   }
 
   revalidatePath("/", "layout");
-  redirect(safeNext(formData.get("next")));
+
+  // Where they were headed wins, if they were headed anywhere: a guardian
+  // following an invite link must still land on the invite.
+  const requested = String(formData.get("next") ?? "");
+  const wasSentSomewhere =
+    requested.startsWith("/") && !requested.startsWith("//");
+
+  if (wasSentSomewhere) {
+    redirect(safeNext(formData.get("next")));
+  }
+
+  // Otherwise a pilot mentor goes to their own page rather than a dashboard of
+  // ground-school lessons they are not taking. They are here to visit a
+  // classroom, not to study for a written test.
+  //
+  // Read outside any try/catch, because redirect() works by throwing.
+  let isPilot = false;
+
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      const { data } = await supabase
+        .from("pilot_profiles")
+        .select("user_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      isPilot = data !== null;
+    }
+  } catch {
+    // A failed read sends them to the student dashboard, which is the same
+    // place they went before this existed.
+  }
+
+  redirect(isPilot ? "/pilot" : "/dashboard");
 }
 
 export async function signOut() {

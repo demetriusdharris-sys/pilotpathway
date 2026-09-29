@@ -190,7 +190,7 @@ export function PilotProfileForm({
 
         <fieldset className="mt-4">
           <legend className="sr-only">Affiliations</legend>
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid gap-2">
             {affiliations.map((affiliation) => (
               <label
                 key={affiliation.slug}
@@ -205,7 +205,18 @@ export function PilotProfileForm({
                   )}
                   className="size-4"
                 />
-                {affiliation.name}
+                {/* Full name first, acronym after. A student does not know what
+                    OBAP stands for, and an affiliation they cannot decode tells
+                    them nothing — which defeats the whole point of it. */}
+                <span>
+                  {affiliation.longName}
+                  {affiliation.name !== affiliation.longName ? (
+                    <span className="text-muted-foreground">
+                      {" "}
+                      ({affiliation.name})
+                    </span>
+                  ) : null}
+                </span>
               </label>
             ))}
           </div>
