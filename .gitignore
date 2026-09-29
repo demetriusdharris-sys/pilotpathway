@@ -49,3 +49,7 @@ docs/tmp/
 
 # Generated from review-packet.html on demand; not source
 docs/cards/review-packet.pdf
+
+# The PHAK is ~78MB. scripts/build-phak-figures.mjs reads it; the committed
+# artifact is docs/reference/phak-figures.json, not the handbook itself.
+docs/reference/phak.pdf

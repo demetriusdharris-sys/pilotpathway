@@ -1,12 +1,19 @@
 /**
  * The four forces in steady, level flight.
  *
- * Drawn rather than lifted from the handbook. The PHAK is public domain and its
- * figures are authoritative, but 961 of its images are JPEG 2000, which no
- * browser but Safari renders — and a scanned figure is a fixed-size raster that
- * blurs on a phone and cannot follow the theme. An SVG is a couple of kilobytes,
- * sharp at any size, and legible in dark mode, which matters for an audience on
- * cheap phones.
+ * Drawn rather than lifted from the handbook, and not for the reason first
+ * assumed. The PHAK is public domain and its figures are authoritative, so
+ * copying them would be legal — but they cannot be copied. Measured against the
+ * 25C edition by scripts/build-phak-figures.mjs: of 522 figures, every teaching
+ * diagram is vector artwork drawn by the page content stream itself, with
+ * gradient meshes, clipping paths and live text. There is no image to lift. The
+ * 378 raster images in the file are photographs — cockpits, buildings, a
+ * portrait of an administrator.
+ *
+ * What the handbook does give us is the brief: each label is its own text block,
+ * so it tells us its four forces figure is labelled exactly Lift, Weight, Drag
+ * and Thrust. We draw from that. An SVG is a couple of kilobytes, sharp at any
+ * size and legible in dark mode, which matters for an audience on cheap phones.
  *
  * It still makes factual claims, so it goes in the review queue with the cards.
  *
