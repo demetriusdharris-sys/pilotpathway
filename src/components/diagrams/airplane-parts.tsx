@@ -23,11 +23,14 @@ const CALLOUTS: ReadonlyArray<{
   line: string;
 }> = [
   {
+    // Anchored to the right edge rather than running off it. At 18px — the
+    // size this needs to stay readable on a phone — "Powerplant" set from
+    // x=372 overflowed the viewBox entirely.
     label: "Powerplant",
-    x: 372,
-    y: 112,
-    anchor: "start",
-    line: "M 374 120 L 350 140",
+    x: 456,
+    y: 104,
+    anchor: "end",
+    line: "M 398 112 L 356 134",
   },
   {
     label: "Empennage",
@@ -130,7 +133,7 @@ export function AirplanePartsDiagram() {
           <path key={c.label} d={c.line} />
         ))}
       </g>
-      <g className="fill-foreground text-[14px] font-semibold">
+      <g className="fill-foreground text-[18px] font-semibold">
         {CALLOUTS.map((c) => (
           <text key={c.label} x={c.x} y={c.y} textAnchor={c.anchor}>
             {c.label}

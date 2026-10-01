@@ -44,7 +44,7 @@ function Instrument({ cy, name }: InstrumentProps) {
         x={298}
         y={cy + 44}
         textAnchor="middle"
-        className="fill-foreground text-[15px] font-semibold"
+        className="fill-foreground text-[16px] font-semibold"
       >
         {name}
       </text>
@@ -91,7 +91,7 @@ export function PitotStaticDiagram() {
         x={6}
         y={40}
         textAnchor="start"
-        className="fill-gold-strong text-[15px] font-semibold"
+        className="fill-gold-strong text-[16px] font-semibold"
       >
         Ram air
       </text>
@@ -125,7 +125,7 @@ export function PitotStaticDiagram() {
         x={30}
         y={100}
         textAnchor="start"
-        className="fill-muted-foreground text-[15px] font-medium"
+        className="fill-muted-foreground text-[16px] font-medium"
       >
         Pitot tube
       </text>
@@ -151,7 +151,7 @@ export function PitotStaticDiagram() {
         x={36}
         y={234}
         textAnchor="start"
-        className="fill-muted-foreground text-[15px] font-medium"
+        className="fill-muted-foreground text-[16px] font-medium"
       >
         Static port
       </text>
@@ -187,7 +187,7 @@ export function PitotStaticDiagram() {
       <Instrument cy={250} name="Vertical speed" />
 
       {/* --- legend -------------------------------------------------------- */}
-      <g className="text-[15px] font-medium">
+      <g className="text-[16px] font-medium">
         <line
           x1={8}
           y1={312}

@@ -91,7 +91,7 @@ export function AirspaceProfileDiagram() {
         x={GUTTER}
         y={50}
         textAnchor="start"
-        className="fill-muted-foreground text-[15px] font-medium"
+        className="fill-muted-foreground text-[16px] font-medium"
       >
         18,000 ft MSL
       </text>
@@ -110,7 +110,7 @@ export function AirspaceProfileDiagram() {
         x={GUTTER}
         y={123}
         textAnchor="start"
-        className="fill-muted-foreground text-[15px] font-medium"
+        className="fill-muted-foreground text-[16px] font-medium"
       >
         14,500 ft MSL
       </text>
@@ -126,17 +126,17 @@ export function AirspaceProfileDiagram() {
       />
       <text
         x={GUTTER}
-        y={300}
+        y={294}
         textAnchor="start"
-        className="fill-muted-foreground text-[15px] font-medium"
+        className="fill-muted-foreground text-[16px] font-medium"
       >
         1,200 ft AGL
       </text>
       <text
         x={GUTTER}
-        y={320}
+        y={322}
         textAnchor="start"
-        className="fill-muted-foreground text-[15px] font-medium"
+        className="fill-muted-foreground text-[16px] font-medium"
       >
         700 ft AGL
       </text>
@@ -179,7 +179,7 @@ export function AirspaceProfileDiagram() {
         x={144}
         y={366}
         textAnchor="middle"
-        className="fill-muted-foreground text-[15px] font-medium"
+        className="fill-muted-foreground text-[16px] font-medium"
       >
         Surface
       </text>

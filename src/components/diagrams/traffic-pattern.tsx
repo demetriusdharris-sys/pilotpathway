@@ -93,7 +93,7 @@ export function TrafficPatternDiagram() {
         x={282}
         y={166}
         textAnchor="middle"
-        className="fill-muted-foreground text-[12px] font-medium tracking-[0.18em]"
+        className="fill-muted-foreground text-[16px] font-medium tracking-[0.18em]"
       >
         RUNWAY
       </text>
@@ -136,13 +136,13 @@ export function TrafficPatternDiagram() {
         x={28}
         y={86}
         textAnchor="start"
-        className="fill-gold-strong text-[14px] font-semibold"
+        className="fill-gold-strong text-[16px] font-semibold"
       >
         Entry, 45&deg;
       </text>
 
       {/* --- leg names ---------------------------------------------------- */}
-      <g className="fill-foreground text-[14px] font-semibold">
+      <g className="fill-foreground text-[16px] font-semibold">
         <text x={268} y={62} textAnchor="start">
           Departure
         </text>

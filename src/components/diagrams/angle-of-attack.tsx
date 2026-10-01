@@ -17,7 +17,9 @@
  * teach the opposite. The caption says it in words as well.
  */
 
-const R = 34;
+// Radius of the angle wedge. Large enough that the wedge reaches past the
+// airfoil's thickness, or it reads as a tick mark buried in the wing.
+const R = 46;
 
 type WingProps = {
   /** Angle of attack in degrees, for the drawing only — never labelled. */
@@ -57,6 +59,21 @@ function Wing({ angle, stalled = false }: WingProps) {
         <line x1={4} y1={86} x2={30} y2={86} opacity={0.6} />
       </g>
 
+      {/* THE WING GOES DOWN FIRST, and the order is the whole diagram.
+          Drawn last — the obvious way — its opaque fill painted over the chord
+          line and the angle arc, so the one thing this picture exists to show
+          was invisible on the small-angle panel and half hidden on the others.
+          The chord line running through the airfoil is also how the handbook
+          draws it. */}
+      <g transform={`rotate(${-angle} 52 70)`}>
+        <path
+          d="M 52 70 C 62 60 86 58 106 63 L 132 70 C 102 76 72 77 52 70 Z"
+          className="fill-muted stroke-foreground"
+          strokeWidth={2}
+          strokeLinejoin="round"
+        />
+      </g>
+
       {/* The chord line, extended, so the angle between it and the wind shows. */}
       <line
         x1={52}
@@ -66,26 +83,21 @@ function Wing({ angle, stalled = false }: WingProps) {
         className="stroke-foreground"
         strokeWidth={1.5}
         strokeDasharray="5 4"
-        opacity={0.75}
+        opacity={0.9}
       />
 
-      {/* The angle itself, drawn from the horizontal round to the chord. */}
+      {/* The angle itself: a filled wedge from the relative wind round to the
+          chord, with its vertex at the leading edge. An arc alone was a short
+          stroke lying inside the airfoil and read as a smudge. Filled, the
+          three panels can be compared at a glance, which is the entire point —
+          the wedge grows, the wing does not change, and the airspeed label
+          underneath is the only other thing that differs. */}
       <path
-        d={`M ${52 + R} 70 A ${R} ${R} 0 0 0 ${endX} ${endY}`}
-        className="stroke-gold-strong"
+        d={`M 52 70 L ${52 + R} 70 A ${R} ${R} 0 0 0 ${endX} ${endY} Z`}
+        className="fill-gold/30 stroke-gold-strong"
         strokeWidth={2.5}
-        fill="none"
+        strokeLinejoin="round"
       />
-
-      {/* The wing section. */}
-      <g transform={`rotate(${-angle} 52 70)`}>
-        <path
-          d="M 52 70 C 62 60 86 58 106 63 L 132 70 C 102 76 72 77 52 70 Z"
-          className="fill-muted stroke-foreground"
-          strokeWidth={2}
-          strokeLinejoin="round"
-        />
-      </g>
 
       {/* Separated airflow, only on the stalled one. */}
       {stalled ? (

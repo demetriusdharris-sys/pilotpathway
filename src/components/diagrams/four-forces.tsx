@@ -90,7 +90,7 @@ export function FourForcesDiagram() {
         x={200}
         y={40}
         textAnchor="middle"
-        className="fill-gold-strong text-[15px] font-semibold"
+        className="fill-gold-strong text-[17px] font-semibold"
       >
         Lift
       </text>
@@ -103,7 +103,7 @@ export function FourForcesDiagram() {
         x={200}
         y={266}
         textAnchor="middle"
-        className="fill-foreground text-[15px] font-semibold"
+        className="fill-foreground text-[17px] font-semibold"
       >
         Weight
       </text>
@@ -116,7 +116,7 @@ export function FourForcesDiagram() {
         x={382}
         y={132}
         textAnchor="end"
-        className="fill-foreground text-[15px] font-semibold"
+        className="fill-foreground text-[17px] font-semibold"
       >
         Thrust
       </text>
@@ -129,7 +129,7 @@ export function FourForcesDiagram() {
         x={30}
         y={132}
         textAnchor="start"
-        className="fill-foreground text-[15px] font-semibold"
+        className="fill-foreground text-[17px] font-semibold"
       >
         Drag
       </text>
