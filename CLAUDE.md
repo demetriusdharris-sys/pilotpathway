@@ -427,7 +427,20 @@ A working pilot speaks to a classroom; the students who are interested sign up f
 - **Claimed once, in the auth callback**, where there is a session and it runs exactly once. Best-effort throughout — a bad code must never stop somebody confirming an account.
 - **The alphabet excludes O/0 and I/1**, because a student reads the code off a projector from the back row and types it on a phone.
 
-**Still to build:** — the sentence a sponsor renews on is "your funded visit produced 14 signups, 9 of whom finished Stage 1", and nothing in the app can produce it yet. Then the student-facing thread, so a pilot's story stays visible to the students who met them. A photo on a pilot profile is wanted and not built: it needs storage, type and size checks, and a decision about showing a volunteer's face to students.
+**Still to build:** the student-facing thread, so a pilot's story stays visible to the students who met them. A photo on a pilot profile is wanted and not built: it needs storage, type and size checks, and a decision about showing a volunteer's face to students.
+
+### What came of a visit — `src/lib/visit-outcomes.ts`
+
+The sentence a sponsor renews on. `visit_signups` knew who a visit reached; this joins that to what those students then did, and puts it on the visit page for the school that hosted it and the pilot who took it. **No migration — it is a read across tables that already exist.**
+
+- **Aggregate only, and there must never be a per-student row.** Counts leave the module and ids do not. Same rule as `/admin`: a screen listing what each named student did, most of them minors, is a surveillance tool, and nothing a sponsor needs requires one.
+- **It reads with the service role, and that is the point.** Attribution is not consent — a student who typed a code has not agreed to let that school or pilot read their progress, and `0021`'s policies correctly refuse it. What they can be part of is a number identifying nobody, which is what "aggregate reporting by default" has meant since `0006`. The caller establishes that the reader is entitled to the **visit**; the module then refuses to say anything about an individual.
+- **Below five signups, no learning figure is reported at all.** With one signup, "1 of 1 finished" is a statement about a person, and whoever was in the room can usually name them. A count stops being aggregate when the group is small enough to point at. The signup count still shows: that is a fact about the visit, not about anybody's learning.
+- **Three figures, and they are not the same kind of fact.** Asked-the-tutor is **observed**. Marked-the-stage-finished is **self-reported** — `lesson_progress` is a flag the student sets, which is architectural debt #2, and it must never be presented as verified. Shown-an-objective is **scored**, the only reportable stream `0009` recognises. The labels say which on their face, because "unverified data in a sponsor report is a trust event you don't recover from".
+- **The scored figure reads zero today, and the panel says why.** No card is approved, so no quiz appears, so nothing can be marked however much work a student does. Showing it as a plain zero would read as the students' failure; the panel names it as ours. **This is the CFI queue showing up in a number a funder will ask about**, which is more use than a note in a file.
+- **A roll-up unions students rather than summing per-visit counts**, so nobody is counted twice — the shape survives the one-attribution-per-student constraint being relaxed later.
+
+**`supabase/tests/visit-outcomes.sql` is the audit.** Read-only, and a second implementation of the same rules in SQL: if it and the page disagree, one is wrong and it matters which. It deliberately does **not** suppress small cells, so you can also check the page's suppression is firing where it should.
 
 ---
 

@@ -4,12 +4,14 @@ import { createClient } from "@/lib/supabase/server";
 import { getSupabaseEnv } from "@/lib/supabase/env";
 import { loadStaffOrganizations } from "@/lib/school-roster";
 import { loadOwnPilotProfile } from "@/lib/pilots";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { loadVisitOutcomesSoft } from "@/lib/visit-outcomes";
+import { VisitOutcomesPanel } from "@/components/visit-outcomes-panel";
 import {
   GRADE_LABEL,
   STATUS_LABEL,
   hasOffered,
   loadOffers,
-  loadSignupCounts,
   loadVisit,
 } from "@/lib/visits";
 import {
@@ -46,14 +48,11 @@ export default async function VisitPage({
   // yours" are the same answer — which is also the answer that reveals least.
   if (!visit) notFound();
 
-  const [organizations, pilot, offers, signupCounts] = await Promise.all([
+  const [organizations, pilot, offers] = await Promise.all([
     loadStaffOrganizations(supabase, user.id).catch(() => []),
     loadOwnPilotProfile(supabase, user.id).catch(() => null),
     loadOffers(supabase, visitId).catch(() => []),
-    loadSignupCounts(supabase, [visitId]),
   ]);
-
-  const signups = signupCounts.get(visitId) ?? 0;
 
   const isStaffHere = organizations.some(
     (org) => org.organizationId === visit.organizationId,
@@ -63,6 +62,9 @@ export default async function VisitPage({
   const offered = isVerifiedPilot
     ? await hasOffered(supabase, visitId, user.id).catch(() => false)
     : false;
+
+  const admin = isStaffHere || isTheirVisit ? createAdminClient() : null;
+  const outcomes = admin ? await loadVisitOutcomesSoft(admin, [visitId]) : null;
 
   const where =
     visit.format === "virtual"
@@ -170,12 +172,23 @@ export default async function VisitPage({
               ground school is free with or without it, and typing it gives this
               school no view of their progress.
             </p>
-            {signups > 0 ? (
-              <p className="mt-3 text-sm font-medium">
-                {signups} student{signups === 1 ? " has" : "s have"} signed up
-                from this visit.
-              </p>
-            ) : null}
+          </section>
+        ) : null}
+
+        {/* What came of it. The school and the pilot only — the figures are
+            aggregate, but who hosted a visit is still not public. */}
+        {outcomes && (isStaffHere || isTheirVisit) ? (
+          <section className="border-border bg-card mt-6 rounded-lg border p-6">
+            <h2 className="text-xl font-semibold">What came of it</h2>
+            <p className="text-muted-foreground mt-1 text-sm text-pretty">
+              {isStaffHere
+                ? "Counts for your school, and the sentence a funder will ask you for."
+                : "Counts for the students who signed up after your visit."}
+            </p>
+            <VisitOutcomesPanel
+              outcomes={outcomes}
+              audience={isStaffHere ? "school" : "pilot"}
+            />
           </section>
         ) : null}
 
