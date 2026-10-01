@@ -109,6 +109,36 @@ export const DIAGRAMS: readonly DiagramEntry[] = [
       "PHAK, airport operations chapter — the single-runway traffic pattern figure. Leg names taken from the handbook's own labelling.",
     position: 1,
   },
+  {
+    key: "hold-short",
+    lessonSlug: "s1-airport-ramp",
+    title: "The runway holding position marking",
+    caption:
+      "Solid lines face the side you hold on; dashed lines face the runway. Taxiing out you meet the solid pair first and stop there unless you have been cleared. Landing, you are only clear of the runway once the whole aeroplane is past the dashed pair.",
+    sourceNote:
+      "PHAK, airport operations chapter, and the AIM's marking standards. Identical at every US airport, so nothing here varies by field or aircraft.",
+    position: 1,
+  },
+  {
+    key: "airport-signs",
+    lessonSlug: "s1-airport-ramp",
+    title: "Reading the signs",
+    caption:
+      "One rule covers all of them: a black background says where you are, a yellow background says where you are going, and red says stop and get a clearance first. The letters shown are generic — no real airport's layout is reproduced.",
+    sourceNote:
+      "PHAK, airport operations chapter, and the AIM's sign standards. The colour code is national.",
+    position: 2,
+  },
+  {
+    key: "segmented-circle",
+    lessonSlug: "s1-airport-ramp",
+    title: "Working out the runway with nobody to ask",
+    caption:
+      "At a field with no tower this is often the only thing that will tell you. The wind cone says which runway; the segmented circle's hooks say which way the circuit turns. A right-hand pattern is drawn here deliberately — the only reason to read one is to catch the case that is not the usual left.",
+    sourceNote:
+      "PHAK, airport operations chapter — wind direction indicators and the segmented circle, with the handbook's own names for the parts.",
+    position: 3,
+  },
 ];
 
 export function diagramsForLesson(lessonSlug: string): DiagramEntry[] {

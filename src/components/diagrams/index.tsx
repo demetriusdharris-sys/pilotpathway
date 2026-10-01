@@ -7,6 +7,9 @@ import { AirspaceProfileDiagram } from "./airspace-profile";
 import { FourStrokeDiagram } from "./four-stroke";
 import { PitotStaticDiagram } from "./pitot-static";
 import { TrafficPatternDiagram } from "./traffic-pattern";
+import { HoldShortDiagram } from "./hold-short";
+import { AirportSignsDiagram } from "./airport-signs";
+import { SegmentedCircleDiagram } from "./segmented-circle";
 
 /**
  * Key to drawing.
@@ -25,6 +28,9 @@ const COMPONENTS: Record<string, () => ReactNode> = {
   "four-stroke": FourStrokeDiagram,
   "pitot-static": PitotStaticDiagram,
   "traffic-pattern": TrafficPatternDiagram,
+  "hold-short": HoldShortDiagram,
+  "airport-signs": AirportSignsDiagram,
+  "segmented-circle": SegmentedCircleDiagram,
 };
 
 export function renderDiagram(key: string): ReactNode {
