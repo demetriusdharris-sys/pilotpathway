@@ -268,6 +268,29 @@ A CFI reviews the 144 quiz cards in the app: status tabs with counts, a lesson l
 
 ---
 
+## Lesson diagrams — migrations `0042`–`0043`, `/review/diagrams`
+
+A lesson was a title, a summary, objectives and a conversation. Nothing to look at, in a subject that is almost entirely visual. Eight diagrams now sit between the objectives and the quiz, drawn as inline SVG in `src/components/diagrams/`, catalogued as plain data in `src/lib/diagrams/catalogue.ts`, and reviewed by a CFI at `/review/diagrams`. **The code is the source of truth and the database holds only review state** — the same split as the cards, so a correction typed into a row would be overwritten by the next sync, and the review page has no edit box.
+
+**The PHAK's diagrams cannot be lifted, and the reason is not the one `0042`'s header comment gives.** That comment says the figures are JPEG 2000 that browsers will not render; it was written before the handbook had actually been parsed and it is superseded — left alone because migrations are never edited, and corrected here. `node scripts/build-phak-figures.mjs` reads the 25C edition and indexes all **522 figures**. **Every teaching diagram is vector artwork drawn by the page content stream itself**, with gradient meshes, clipping paths and live text — there is no image in the file to extract. The four forces, the axes of an airplane, the controls-and-stability table, the traffic patterns: all of them. The **378 raster images are photographs** — cockpits, buildings, a portrait of an administrator. Extracting them was proven to work and yields nothing worth showing.
+
+**What the handbook does give is the brief.** Each label is its own text block in the content stream, so it states that its four forces figure is labelled exactly Lift, Weight, Drag and Thrust; that its controls figure pairs aileron with roll and the longitudinal axis; that its traffic pattern names entry, crosswind, downwind, base, final and departure. We draw from that. The result is accurate to the source, checkable by a CFI against it, and a couple of kilobytes of themeable SVG instead of a raster that blurs on a phone. **The handbook is ~78MB and is gitignored** at `docs/reference/phak.pdf`; the committed artifact is `docs/reference/phak-figures.json`, and the script says where to put the PDF if the index needs regenerating.
+
+### Locked design decisions
+
+- **A diagram asserts facts, so it goes in the review queue with the cards.** The four forces are only equal in unaccelerated flight, and a picture implying they are always equal teaches something to unlearn. Everything lands as `draft`; a student sees nothing until a CFI approves it.
+- **An approval covers the words that were reviewed.** A changed title or caption knocks the diagram back to `draft` and clears its reviewer, exactly as `0015` does to a card.
+- **Measured on a phone, which changed two of the eight.** At 375px the airspace profile and the pitot-static schematic rendered their labels at **9px** — measured in the browser, not estimated. Both were redrawn: the airspace profile is tall and narrow with every altitude in a gutter down the right, and the pitot-static instruments are named underneath rather than beside. **Checked programmatically rather than by eye** — every `<text>` element's bounding box compared against every other and against the viewBox. No overlaps, no overflow, smallest text 12px at 375px. **Re-run that check after editing any SVG**; a diagram whose labels cannot be read on a cheap phone is not a diagram.
+- **Sources are named, never numbered.** `phak-figures.json` records figure numbers because that is how a reviewer finds the page in their own copy. Nothing carrying one may reach a student — same rule as the cards and questions.
+- **Numbers appear on exactly one diagram.** The airspace profile carries 700 ft AGL, 1,200 ft AGL, 14,500 ft MSL and 18,000 ft MSL because 14 CFR part 71 fixes them and they are identical at every airport. Nothing aircraft-specific appears anywhere: no pattern altitude, no stall speed, and no figure for the critical angle of attack, which depends on the wing.
+- **The catalogue carries no JSX**, so `scripts/import-diagrams.mjs` can read it through Node's TypeScript stripping to generate `0043`. A key present in the components map and absent from the catalogue renders nothing; the reverse returns null rather than crashing a student's lesson.
+
+**`supabase/tests/diagram-review.sql` is how this is verified** — eleven checks covering the refusals, the approval, the wording reset, and what a student can actually read. **It refuses to run if any diagram has already been reviewed**, and its teardown touches only the single row it used: a blanket reset would turn a failed assertion into deleted CFI work.
+
+**`0042` writes RLS policies and no explicit `GRANT`**, relying on Supabase's default privileges for a new table in `public`. That is the shape of the `0014` bug — a policy without the grant it needs fails with `42501` and renders silently empty. Step 9 of the test reads the table as the `authenticated` role to settle it rather than assume it. If it fails, the fix is a new migration granting `select`, never a column grant.
+
+---
+
 ## Scored practice results reach the tutor
 
 Closes rule 6 of the practice-test spec. A weak ACS code already linked to its lesson, but Captain Path had no idea a student had just scored 2 of 8 on the thing it was about to teach, so it taught identically either way — the opposite of adaptive. Read by `src/lib/practice/tutor-evidence.ts`, rendered into a paragraph by `buildMasteryNotes`.
