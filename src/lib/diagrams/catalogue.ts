@@ -36,7 +36,7 @@ export const DIAGRAMS: readonly DiagramEntry[] = [
     caption:
       "In steady, level flight lift balances weight and thrust balances drag. Change any one of them and the aeroplane accelerates, climbs or descends — the forces are only equal while nothing is changing.",
     sourceNote:
-      "PHAK, aerodynamics of flight chapter — the four forces in unaccelerated flight.",
+      "The handbook's own four forces illustration, from the aerodynamics of flight chapter, cropped clear of its caption. Public domain.",
     position: 1,
   },
   {
@@ -46,7 +46,7 @@ export const DIAGRAMS: readonly DiagramEntry[] = [
     caption:
       "Each control moves the aeroplane about one axis, and all three pass through the centre of gravity. In practice they work together — a turn uses aileron and rudder, and holding altitude through it uses elevator.",
     sourceNote:
-      "PHAK, flight controls and aerodynamics chapters — the three axes and the primary control for each.",
+      "The handbook's own axes illustration, cut into its three panels so it stays readable on a phone. The control named under each panel is ours — the handbook's artwork names the motion and the axis but not the control. Public domain.",
     position: 1,
   },
   {
@@ -56,7 +56,7 @@ export const DIAGRAMS: readonly DiagramEntry[] = [
     caption:
       "Powerplant, fuselage, wing, empennage and landing gear. The handbook names smaller parts too — bulkheads, stringers, longerons — but these five are what a CFI points at on a walk-round, and what every later lesson builds on.",
     sourceNote:
-      "PHAK, aircraft structure chapter — the major components of an airplane. Labels taken from the handbook's own figure.",
+      "The handbook's own components illustration, from the aircraft structure chapter, with each part shaded a different colour. Public domain.",
     position: 1,
   },
   {
